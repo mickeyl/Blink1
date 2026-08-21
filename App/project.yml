@@ -1,0 +1,54 @@
+name: Blink1Bar
+options:
+  bundleIdPrefix: de.vanille
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+# The library lives one level up in this repository; the app links its product. The project stays in
+# its own directory so that the package path and the project path differ — the package itself has to
+# stay at the repository root to remain consumable by SwiftPM over a URL.
+packages:
+  Blink1:
+    path: ..
+
+# Project-wide build knobs live in Config/Base.xcconfig — xcodegen only references them, so
+# interactive edits in Xcode survive a regeneration. Target tweaks: Config/<Target>.xcconfig.
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+
+targets:
+  Blink1Bar:
+    type: application
+    platform: macOS
+    configFiles:
+      Debug: Config/Blink1Bar.xcconfig
+      Release: Config/Blink1Bar.xcconfig
+    sources:
+      - path: Blink1Bar
+    dependencies:
+      - package: Blink1
+        product: Blink1
+      - package: Blink1
+        product: Blink1Control
+    info:
+      path: Blink1Bar/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Blink1Bar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Menu bar only: no Dock icon, no main window.
+        LSUIElement: true
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: ""
+    preBuildScripts:
+      - name: Create Shark Resources
+        basedOnDependencyAnalysis: false
+        script: |
+          unset SDKROOT
+          /opt/homebrew/bin/shark "$PROJECT_FILE_PATH" "$PROJECT_DIR/Blink1Bar/Resources/Shark.swift" --target Blink1Bar --framework swiftui --name R --deps /tmp/deps-blink1bar.d
+        outputFiles:
+          - $(SRCROOT)/Blink1Bar/Resources/Shark.swift

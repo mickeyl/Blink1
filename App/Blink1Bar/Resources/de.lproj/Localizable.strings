@@ -1,0 +1,48 @@
+/*
+  Localizable.strings — Blink1Bar (Deutsch)
+*/
+
+/* Gerät */
+"Device_NONE_ATTACHED" = "Kein blink(1) angeschlossen";
+"Device_DETAILS" = "%@ · Firmware %@";
+"Device_PICKER" = "Gerät";
+"Device_AUTOMATIC" = "Erstes gefundenes";
+
+/* Menü */
+"MenuContent_MODE_OFF" = "Aus";
+"MenuContent_MODE_COLOR" = "Farbe";
+"MenuContent_MODE_SIGNAL" = "Signal";
+"MenuContent_MODE_TIME" = "Uhrzeit";
+"MenuContent_BRIGHTNESS" = "Helligkeit";
+"MenuContent_DIM_AT_NIGHT" = "Nachts dimmen";
+"MenuContent_REINSTALL_BANK" = "Signalbank neu schreiben";
+"MenuContent_QUIT" = "Beenden";
+
+/* Statische Farbe */
+"Color_PICKER" = "Farbe";
+
+/* Uhrzeit */
+"Time_EXPLANATION" = "Die Farbe folgt der Tageszeit.";
+"Time_BLIP_ON_THE_HOUR" = "Blip zur vollen Stunde";
+
+/* Allgemein */
+"MenuContent_START_AT_LOGIN" = "Beim Anmelden starten";
+"MenuContent_LOGIN_APPROVAL" = "In den Systemeinstellungen erlauben…";
+"MenuContent_WATCHDOG" = "Signal, wenn die App aussetzt";
+"MenuContent_WATCHDOG_HELP" = "Das Gerät wechselt selbstständig zum Host-weg-Signal, wenn 30 Sekunden lang niemand nachtriggert.";
+"MenuContent_SLEEP" = "Wenn der Mac schläft";
+"Sleep_OFF" = "Ausschalten";
+"Sleep_KEEP" = "Leuchten lassen";
+
+/* Signale */
+"Signal_OFF" = "Aus";
+"Signal_OK" = "OK";
+"Signal_IDLE" = "Leerlauf";
+"Signal_BUSY" = "Beschäftigt";
+"Signal_INFO" = "Info";
+"Signal_WARN" = "Warnung";
+"Signal_ERROR" = "Fehler";
+"Signal_CRITICAL" = "Kritisch";
+"Signal_SUCCESS" = "Erfolg";
+"Signal_FAILURE" = "Fehlschlag";
+"Signal_HOST_GONE" = "Host weg";

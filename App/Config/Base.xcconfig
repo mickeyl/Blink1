@@ -1,0 +1,25 @@
+// Blink1Bar — shared build knobs.
+//
+// This file is the two-way gap in XcodeGen: values here are referenced by
+// `xcodegen generate`, never overwritten. Edit it as text (or in Xcode) and the
+// changes survive every regeneration.
+//
+// For a setting here to take effect it must NOT also appear in project.yml
+// under `settings`: pbxproj values beat xcconfig.
+
+SWIFT_VERSION = 6.0
+CODE_SIGN_STYLE = Automatic
+
+// Signing identity stays out of the repository: put DEVELOPMENT_TEAM into
+// Config/Local.xcconfig (git-ignored), or select a team in Xcode once.
+#include? "Local.xcconfig"
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+// UI code is MainActor-isolated by default; the device I/O lives in an actor.
+SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+SWIFT_APPROACHABLE_CONCURRENCY = YES
+
+// Shark writes Shark.swift and reads the strings files → no sandboxing.
+ENABLE_USER_SCRIPT_SANDBOXING = NO

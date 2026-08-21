@@ -1,0 +1,9 @@
+// Blink1Bar (menu bar app) — target-specific build knobs.
+//
+// The shared base (Config/Base.xcconfig) is inherited project-wide; only tweaks
+// that concern this app belong here.
+
+// Talking to USB HID needs unmediated IOKit access, which the App Sandbox does
+// not grant for vendor-defined HID devices.
+ENABLE_APP_SANDBOX = NO
+ENABLE_HARDENED_RUNTIME = YES

@@ -1,0 +1,50 @@
+/*
+  Localizable.strings — Blink1Bar (English)
+  Keys follow the convention ViewName_ELEMENT_DESCRIPTION.
+  Shark generates the R enum from this (base) locale.
+*/
+
+/* Device */
+"Device_NONE_ATTACHED" = "No blink(1) attached";
+"Device_DETAILS" = "%@ · firmware %@";
+"Device_PICKER" = "Device";
+"Device_AUTOMATIC" = "First one found";
+
+/* Menu */
+"MenuContent_MODE_OFF" = "Off";
+"MenuContent_MODE_COLOR" = "Color";
+"MenuContent_MODE_SIGNAL" = "Signal";
+"MenuContent_MODE_TIME" = "Clock";
+"MenuContent_BRIGHTNESS" = "Brightness";
+"MenuContent_DIM_AT_NIGHT" = "Dim at night";
+"MenuContent_REINSTALL_BANK" = "Rewrite signal bank";
+"MenuContent_QUIT" = "Quit";
+
+/* Static color */
+"Color_PICKER" = "Color";
+
+/* Clock */
+"Time_EXPLANATION" = "The color follows the time of day.";
+"Time_BLIP_ON_THE_HOUR" = "Blip on the hour";
+
+/* General */
+"MenuContent_START_AT_LOGIN" = "Start at login";
+"MenuContent_LOGIN_APPROVAL" = "Allow in System Settings…";
+"MenuContent_WATCHDOG" = "Signal when the app stops";
+"MenuContent_WATCHDOG_HELP" = "The device switches to the host-gone signal on its own if nothing has re-armed it for 30 seconds.";
+"MenuContent_SLEEP" = "While the Mac sleeps";
+"Sleep_OFF" = "Go dark";
+"Sleep_KEEP" = "Keep the light";
+
+/* Signals */
+"Signal_OFF" = "Off";
+"Signal_OK" = "OK";
+"Signal_IDLE" = "Idle";
+"Signal_BUSY" = "Busy";
+"Signal_INFO" = "Info";
+"Signal_WARN" = "Warning";
+"Signal_ERROR" = "Error";
+"Signal_CRITICAL" = "Critical";
+"Signal_SUCCESS" = "Success";
+"Signal_FAILURE" = "Failure";
+"Signal_HOST_GONE" = "Host gone";
