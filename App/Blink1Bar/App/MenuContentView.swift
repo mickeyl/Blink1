@@ -25,6 +25,10 @@ struct MenuContentView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
 
+            if let claim = model.externalClaim {
+                ClaimBannerView(claim: claim)
+            }
+
             switch model.preferences.mode {
                 case .off: EmptyView()
                 case .color: StaticColorSectionView()

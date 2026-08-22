@@ -197,6 +197,29 @@ blink1 raw 63 ff 00 00 00 0a 00  # 'c' — fade to red over 100ms
 .package(url: "https://github.com/mickeyl/Blink1", from: "1.0.0"),
 ```
 
+## Sources and priorities
+
+Several things want the LED at once, so nothing drives it directly: sources put in a claim and an
+arbiter decides. Highest priority wins, and among equals the most recent claim — dull on purpose, so
+the outcome follows from the claims rather than from who wrote last.
+
+The mode picked in the menu is itself a claim, at the lowest priority: it is what the LED falls back
+to. Anything pushed in from outside sits above it, and a `critical` sits above everything.
+
+```sh
+blink1 signal busy  --source build           # a claim named "build"
+blink1 signal error --source ci              # outranks it: attention beats status
+blink1 clear --source build                  # …withdraw one
+blink1 signal success --duration 30s         # …or let it lapse on its own
+blink1 clear                                 # withdraw everything, back to the menu's mode
+```
+
+The menu shows who took the LED and hands it back:
+
+<p align="center">
+  <img src="docs/claim.png" width="300" alt="A claim from a source named ci holding the LED, with a release button">
+</p>
+
 ## Reporting status to the app
 
 The app owns the device while it runs, so the CLI forwards to it instead of writing behind its back:

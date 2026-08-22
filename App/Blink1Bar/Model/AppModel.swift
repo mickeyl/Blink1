@@ -14,9 +14,13 @@ final class AppModel {
         didSet {
             guard preferences != oldValue else { return }
             preferences.save()
+            claimAmbient()
             Task { await applyCurrentOutput() }
         }
     }
+
+    /// Everything that wants the LED goes through here, including the menu's own mode.
+    let arbiter = StatusArbiter()
 
     private(set) var connection: Blink1Coordinator.Connection?
     private(set) var attachedDevices: [Blink1.Info] = []
@@ -46,19 +50,52 @@ final class AppModel {
 
     init() {
         self.preferences = .load()
+        claimAmbient()
     }
 
-    var isConnected: Bool { connection != nil }
-
-    /// What the LED should show, given the current settings and the time.
-    var currentOutput: DeviceOutput {
-        switch preferences.mode {
+    /// The mode picked in the menu is a claim like any other — the one everything else outranks.
+    private func claimAmbient() {
+        let presentation: StatusClaim.Presentation = switch preferences.mode {
             case .off: .off
             case .color: .color(preferences.staticColor)
             case .signal: .signal(preferences.signal)
             case .timeOfDay: .color(timeOfDayColor)
             case .audio: .audio
         }
+        arbiter.claim(.init(source: .ambient, priority: .ambient, presentation: presentation))
+    }
+
+    var isConnected: Bool { connection != nil }
+
+    /// What the LED should show: whichever claim currently outranks the rest.
+    var currentOutput: DeviceOutput {
+        arbiter.winner?.presentation.output ?? .off
+    }
+
+    /// A claim from somewhere other than the menu, if one is showing — for the menu to display.
+    var externalClaim: StatusClaim? {
+        guard let winner = arbiter.winner, winner.source != .ambient else { return nil }
+        return winner
+    }
+
+    /// Puts a status in front of the ambient mode.
+    func claim(_ presentation: StatusClaim.Presentation,
+               priority: StatusClaim.Priority,
+               from source: StatusClaim.Source = .external,
+               for duration: Duration? = nil) {
+        arbiter.claim(.init(source: source, priority: priority, presentation: presentation, duration: duration))
+        Task { await applyCurrentOutput() }
+    }
+
+    func withdrawClaim(from source: StatusClaim.Source = .external) {
+        arbiter.withdraw(source)
+        Task { await applyCurrentOutput() }
+    }
+
+    /// Everything pushed in steps aside; the mode picked in the menu has the LED back.
+    func withdrawAllClaims() {
+        arbiter.withdrawAll()
+        Task { await applyCurrentOutput() }
     }
 
     /// The most recent stereo pair, for the meters in the menu.
@@ -76,6 +113,7 @@ final class AppModel {
         tasks.append(Task { await self.followTheClock() })
         tasks.append(Task { await self.feedTheWatchdog() })
         tasks.append(Task { await self.followTheAudio() })
+        tasks.append(Task { await self.expireClaims() })
         powerMonitor.start(onSleep: { [weak self] in self?.handleSleep() },
                            onWake: { [weak self] in self?.handleWake() })
         startControlServer()
@@ -212,6 +250,7 @@ final class AppModel {
             let color = TimeOfDayPalette.color()
             if color != timeOfDayColor {
                 timeOfDayColor = color
+                if preferences.mode == .timeOfDay { claimAmbient() }
             }
             await blipIfANewHourStarted()
             await resyncIfTheDeviceDrifted()
@@ -223,10 +262,24 @@ final class AppModel {
     /// Something else may have written to the device; if so, take it back.
     private func resyncIfTheDeviceDrifted() async {
         // In audio mode the color changes every frame; there is no steady state to compare against.
-        guard preferences.mode != .audio else { return }
+        guard currentOutput != .audio else { return }
         guard !isAsleep, connection != nil, appliedOutput != nil else { return }
         guard await coordinator.needsResync(for: currentOutput, brightness: effectiveBrightness) else { return }
         appliedOutput = nil
+    }
+
+    /// Hands the LED back when a claim lapses.
+    ///
+    /// Without this the device would keep showing an expired status until something else happened to
+    /// re-apply — which in a quiet mode like the clock could be twenty seconds later.
+    private func expireClaims() async {
+        while !Task.isCancelled {
+            if arbiter.dropExpiredClaims() {
+                await applyCurrentOutput()
+            }
+            // Only worth checking often while something actually has an expiry date.
+            try? await Task.sleep(for: arbiter.nextExpiry == nil ? .seconds(5) : .milliseconds(500))
+        }
     }
 
     /// Drives the LEDs from the system audio while that mode is selected.
@@ -236,7 +289,7 @@ final class AppModel {
     private func followTheAudio() async {
         var lastFrame = ContinuousClock.now
         while !Task.isCancelled {
-            guard preferences.mode == .audio, !isAsleep, connection != nil else {
+            guard currentOutput == .audio, !isAsleep, connection != nil else {
                 if audioTap.isRunning {
                     audioTap.stop()
                     audioMeter.reset()
@@ -253,7 +306,7 @@ final class AppModel {
                     lastFrame = .now
                 } catch {
                     audioErrorMessage = error.description
-                    preferences.mode = .off
+                    if preferences.mode == .audio { preferences.mode = .off }
                     continue
                 }
             }
@@ -288,7 +341,7 @@ final class AppModel {
         let hour = Calendar.current.component(.hour, from: .now)
         defer { lastBlipHour = hour }
         guard let lastBlipHour, lastBlipHour != hour else { return }
-        guard preferences.blipOnTheHour, preferences.mode == .timeOfDay, !preferences.isNight() else { return }
+        guard preferences.blipOnTheHour, currentOutput == .color(timeOfDayColor), !preferences.isNight() else { return }
         try? await coordinator.flash(.info, for: .seconds(3),
                                      thenReturningTo: currentOutput,
                                      brightness: effectiveBrightness,

@@ -75,6 +75,17 @@ directly and write to `FileHandle.standardError` instead. Beware of stale app co
 launch another bundle with the same identifier from Xcode's DerivedData rather than the one just
 built.
 
+## Status arbitration
+
+`StatusArbiter` holds one `StatusClaim` per source and picks the winner: highest priority, newest on
+a tie. `AppModel.currentOutput` reads from it rather than from `preferences.mode` — the menu's mode
+is just the `.ambient` claim, which is why switching modes and pushing a status no longer fight.
+
+Adding a source means claiming and withdrawing, nothing else. Two things to keep in mind: a claim
+with an expiry needs `expireClaims()` to hand the LED back (the audio loop happens to notice within a
+frame, quiet modes would not), and anything that pushes frame by frame — audio today — must check
+`currentOutput`, not the preference, or it will paint over a claim that outranks it.
+
 ## Control channel (Sources/Blink1Control)
 
 A Unix socket at `~/Library/Application Support/Blink1Bar/control.sock`, one JSON object per line,

@@ -17,6 +17,25 @@ struct AudioCommand: ParsableCommand {
     }
 }
 
+struct ClearCommand: ParsableCommand {
+
+    static let configuration = CommandConfiguration(
+        commandName: "clear",
+        abstract: "Withdraw a pushed status, back to what the app was showing.",
+        discussion: "The counterpart to `signal`: it takes the status away and lets the mode chosen "
+            + "in the menu — clock, audio, a color — have the LED back.")
+
+    @Option(name: .long, help: ArgumentHelp("Which claim to withdraw.", valueName: "name"))
+    var source: String?
+
+    @OptionGroup var output: OutputOptions
+
+    func run() throws {
+        output.apply()
+        try ModeCommand.hand(over: .clear(source: source), named: "cleared")
+    }
+}
+
 struct ClockCommand: ParsableCommand {
 
     static let configuration = CommandConfiguration(

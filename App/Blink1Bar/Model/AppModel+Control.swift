@@ -14,17 +14,29 @@ extension AppModel {
             case .status:
                 break
             case .off:
+                // "off" means off, so everything pushed in steps aside too.
+                withdrawAllClaims()
                 preferences.mode = .off
+            case .clear(let source):
+                // Naming a source clears that one; clearing without a name clears the lot, which is
+                // what someone typing `blink1 clear` after a script died actually wants.
+                if let source {
+                    withdrawClaim(from: .init(rawValue: source))
+                } else {
+                    withdrawAllClaims()
+                }
             case .clock:
                 preferences.mode = .timeOfDay
             case .audio:
                 preferences.mode = .audio
-            case .signal(let name):
+            case .signal(let name, let seconds, let source):
                 guard let signal = Blink1.Signal(rawValue: name.lowercased()) else {
                     return .failure("unknown signal '\(name)' — try \(Blink1.Signal.allCases.map(\.rawValue).joined(separator: ", "))")
                 }
-                preferences.signal = signal
-                preferences.mode = .signal
+                claim(.signal(signal),
+                      priority: signal.claimPriority,
+                      from: source.map { StatusClaim.Source(rawValue: $0) } ?? .external,
+                      for: seconds.map { .milliseconds(Int($0 * 1000)) })
             case .color(let text):
                 guard let color = Blink1.Color(text) else {
                     return .failure("'\(text)' is not a color — try a name, #rrggbb or r,g,b")
@@ -36,6 +48,16 @@ extension AppModel {
     }
 
     private func status() -> ControlResponse {
+        if let claim = externalClaim, case .signal(let signal) = claim.presentation {
+            let remaining = claim.expiresAt.map { ", \(max(Int($0.timeIntervalSinceNow), 0))s left" } ?? ""
+            return ControlResponse(ok: true, mode: "signal",
+                                   detail: "\(signal) (\(claim.source)\(remaining))",
+                                   device: connection?.serialNumber)
+        }
+        return ambientStatus()
+    }
+
+    private func ambientStatus() -> ControlResponse {
         let mode: String
         let detail: String?
         switch preferences.mode {

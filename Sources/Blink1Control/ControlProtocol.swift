@@ -10,8 +10,12 @@ public enum ControlRequest: Codable, Sendable, Equatable {
     /// What is the app showing right now?
     case status
     case off
-    /// A signal by name, e.g. "error".
-    case signal(String)
+    /// A signal by name, e.g. "error". `seconds` lets it lapse on its own; without it the signal
+    /// stands until something outranks it or `clear` withdraws it.
+    /// `source` lets several scripts hold claims side by side; the most urgent one shows.
+    case signal(String, seconds: Double? = nil, source: String? = nil)
+    /// Withdraw a pushed status, back to what the app was showing before.
+    case clear(source: String? = nil)
     /// A steady color, written the way the CLI accepts it: "#ff8800", "red", "255,136,0".
     case color(String)
     /// Hand control back to the clock.
@@ -23,7 +27,7 @@ public enum ControlRequest: Codable, Sendable, Equatable {
 public struct ControlResponse: Codable, Sendable, Equatable {
 
     public var ok: Bool
-    /// The mode the app is in afterwards: "off", "color", "signal" or "clock".
+    /// What is showing afterwards: "off", "color", "signal", "clock" or "audio".
     public var mode: String?
     /// What that mode shows — a signal name or a hex color.
     public var detail: String?

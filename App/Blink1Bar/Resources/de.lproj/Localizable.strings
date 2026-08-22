@@ -34,6 +34,11 @@
 "Sleep_OFF" = "Ausschalten";
 "Sleep_KEEP" = "Leuchten lassen";
 
+/* Ansprüche */
+"Claim_RELEASE" = "Freigeben";
+"Claim_HELD_BY" = "belegt von %@";
+"Claim_HELD_UNTIL" = "belegt von %@, noch %d s";
+
 /* Audio */
 "MenuContent_MODE_AUDIO" = "Audio";
 "Audio_EXPLANATION" = "Die LEDs folgen dem Systemton: oben der linke Kanal, unten der rechte.";
