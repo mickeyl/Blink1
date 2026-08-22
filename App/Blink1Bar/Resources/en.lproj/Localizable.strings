@@ -36,6 +36,11 @@
 "Sleep_OFF" = "Go dark";
 "Sleep_KEEP" = "Keep the light";
 
+/* Audio */
+"MenuContent_MODE_AUDIO" = "Audio";
+"Audio_EXPLANATION" = "The LEDs follow the system audio: top is the left channel, bottom the right.";
+"Audio_SENSITIVITY" = "Sensitivity";
+
 /* Signals */
 "Signal_OFF" = "Off";
 "Signal_OK" = "OK";

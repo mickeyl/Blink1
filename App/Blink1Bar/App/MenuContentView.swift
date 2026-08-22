@@ -18,6 +18,7 @@ struct MenuContentView: View {
                 Text(R.L.MenuContent_MODE_COLOR).tag(Preferences.Mode.color)
                 Text(R.L.MenuContent_MODE_SIGNAL).tag(Preferences.Mode.signal)
                 Text(R.L.MenuContent_MODE_TIME).tag(Preferences.Mode.timeOfDay)
+                Text(R.L.MenuContent_MODE_AUDIO).tag(Preferences.Mode.audio)
             } label: {
                 EmptyView()
             }
@@ -29,6 +30,7 @@ struct MenuContentView: View {
                 case .color: StaticColorSectionView()
                 case .signal: SignalSectionView()
                 case .timeOfDay: TimeOfDaySectionView()
+                case .audio: AudioSectionView()
             }
 
             Divider()

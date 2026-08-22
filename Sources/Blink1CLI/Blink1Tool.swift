@@ -31,6 +31,7 @@ struct Blink1Tool: ParsableCommand {
             StatusCommand.self,
             SignalCommand.self,
             ClockCommand.self,
+            AudioCommand.self,
             BankCommand.self,
             InfoCommand.self,
             SetCommand.self,

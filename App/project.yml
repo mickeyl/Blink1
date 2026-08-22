@@ -43,6 +43,9 @@ targets:
         # Menu bar only: no Dock icon, no main window.
         LSUIElement: true
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # Without this key the system audio tap silently delivers silence rather than failing.
+        NSAudioCaptureUsageDescription: Blink1Bar measures how loud your Mac is playing, so the
+          blink(1) can show the level of the left and right channel.
         NSHumanReadableCopyright: ""
     preBuildScripts:
       - name: Create Shark Resources

@@ -17,6 +17,8 @@ extension AppModel {
                 preferences.mode = .off
             case .clock:
                 preferences.mode = .timeOfDay
+            case .audio:
+                preferences.mode = .audio
             case .signal(let name):
                 guard let signal = Blink1.Signal(rawValue: name.lowercased()) else {
                     return .failure("unknown signal '\(name)' — try \(Blink1.Signal.allCases.map(\.rawValue).joined(separator: ", "))")
@@ -49,6 +51,9 @@ extension AppModel {
             case .timeOfDay:
                 mode = "clock"
                 detail = timeOfDayColor.hexString
+            case .audio:
+                mode = "audio"
+                detail = String(format: "L %.0f%% R %.0f%%", audioLevels.left * 100, audioLevels.right * 100)
         }
         return ControlResponse(ok: true, mode: mode, detail: detail, device: connection?.serialNumber)
     }

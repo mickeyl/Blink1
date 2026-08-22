@@ -64,6 +64,17 @@ actor Blink1Coordinator {
         try apply(output, brightness: brightness, serialNumber: serialNumber)
     }
 
+    /// Pushes one stereo frame: top LED is the left channel, bottom the right.
+    ///
+    /// Bypasses `apply` deliberately — these values change every frame, so the "already applied"
+    /// bookkeeping would only get in the way. The short fade lets the device interpolate between
+    /// frames, which is what makes 30 updates a second look smooth rather than strobing.
+    func showLevels(left: Blink1.Color, right: Blink1.Color, fade: Duration) throws {
+        guard let device else { throw Blink1Error.noDeviceFound }
+        try device.fade(to: left, over: fade, led: .top)
+        try device.fade(to: right, over: fade, led: .bottom)
+    }
+
     /// Checks whether the device still shows what it was told to show.
     ///
     /// The app is not the only thing that can reach the blink(1) — a CLI run with `--direct`, a test,
@@ -79,6 +90,8 @@ actor Blink1Coordinator {
                     let expected = color.dimmed(to: brightness)
                     let actual = try device.readColor().color
                     return !Self.isClose(actual, expected)
+                case .audio:
+                    return false
                 case .signal(let signal):
                     // A signal is a running pattern: the range it plays is the thing to compare.
                     let state = try device.readPlayState()
@@ -119,6 +132,10 @@ actor Blink1Coordinator {
                 // Stop first: a running pattern would paint over the color a moment later.
                 try device.stop()
                 try device.fade(to: color.dimmed(to: brightness), over: .milliseconds(250))
+            case .audio:
+                // Nothing to show yet: stop the pattern player so it cannot paint over the levels
+                // that are about to be pushed frame by frame.
+                try device.stop()
             case .signal(let signal):
                 // Only signals care about the bank, and rewriting 32 slots is too much to do while a
                 // brightness slider is being dragged.

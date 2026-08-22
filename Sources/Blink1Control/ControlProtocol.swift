@@ -16,6 +16,8 @@ public enum ControlRequest: Codable, Sendable, Equatable {
     case color(String)
     /// Hand control back to the clock.
     case clock
+    /// Let the LEDs follow the system audio.
+    case audio
 }
 
 public struct ControlResponse: Codable, Sendable, Equatable {

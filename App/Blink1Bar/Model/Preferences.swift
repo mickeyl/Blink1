@@ -12,6 +12,7 @@ struct Preferences: Codable, Equatable, Sendable {
         case color
         case signal
         case timeOfDay
+        case audio
 
         var id: String { rawValue }
     }
@@ -31,6 +32,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var signal: Blink1.Signal = .ok
     /// A short blip on every full hour while the clock drives the LED.
     var blipOnTheHour: Bool = true
+    /// Where the audio meter bottoms out, in dBFS. Quieter than this reads as silence.
+    var audioFloorDecibels: Double = -50
     var dimsAtNight: Bool = true
     var nightStartHour: Int = 22
     var nightEndHour: Int = 7

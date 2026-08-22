@@ -106,7 +106,20 @@ The Makefile wraps all of it: `make bank`, then `make ok`, `make busy`, `make er
   amber towards the evening. Optionally a short blip on every full hour.
 * **Color** — one steady color as decoration, from a picker or a row of presets.
 * **Signal** — plays any signal from the bank by hand.
+* **Audio** — the LEDs become a stereo VU meter: top LED the left channel, bottom the right, running
+  the familiar ramp from dark green through yellow and orange to red.
 * **Off**.
+
+<p align="center">
+  <img src="docs/audio-mode.png" width="300" alt="Audio mode: two channel meters, the VU gradient and a sensitivity slider">
+</p>
+
+Audio mode taps the system output through Core Audio (`AudioHardwareCreateProcessTap`, macOS 14.2 and
+later) — no virtual audio driver, and playback is not interrupted. macOS asks for the system audio
+recording permission the first time; without it the tap delivers silence rather than an error, which
+is worth knowing when the meters stay at zero. Levels are RMS on a decibel scale with a fast attack
+and a slow release, so the display follows the music instead of twitching. The tap is only open while
+the mode is selected.
 
 Brightness applies to every mode, with an optional night-time reduction between two hours. It can
 start at login, turns the LED dark while the Mac sleeps (or leaves it, your choice) and reconnects on
@@ -187,6 +200,7 @@ The app owns the device while it runs, so the CLI forwards to it instead of writ
 blink1 signal error       # goes to Blink1Bar if it is running, to the device otherwise
 blink1 set '#ff8800'
 blink1 clock              # hand the LED back to the clock
+blink1 audio              # …or to the audio meter
 blink1 status             # what is it showing? --json for scripts
 blink1 signal ok --direct # bypass the app on purpose
 ```

@@ -27,6 +27,8 @@ final class AppModel {
     private let coordinator = Blink1Coordinator()
     private let powerMonitor = PowerMonitor()
     private let controlServer = ControlServer()
+    private let audioTap = SystemAudioTap()
+    private var audioMeter = AudioLevelMeter()
     private var appliedOutput: DeviceOutput?
     private var appliedBrightness: Double?
     private var lastBlipHour: Int?
@@ -36,6 +38,11 @@ final class AppModel {
     /// The watchdog has to be re-armed well inside its own timeout, or it fires on a healthy app.
     private static let watchdogTimeout = Duration.seconds(30)
     private static let watchdogHeartbeat = Duration.seconds(10)
+
+    /// 30 frames a second: the device needs 6ms for a stereo frame and interpolates the rest, while
+    /// its fade engine only ticks every 10ms — going faster would cost USB traffic for nothing.
+    private static let audioFrameRate = 30.0
+    private static let audioFade = Duration.milliseconds(40)
 
     init() {
         self.preferences = .load()
@@ -50,8 +57,14 @@ final class AppModel {
             case .color: .color(preferences.staticColor)
             case .signal: .signal(preferences.signal)
             case .timeOfDay: .color(timeOfDayColor)
+            case .audio: .audio
         }
     }
+
+    /// The most recent stereo pair, for the meters in the menu.
+    private(set) var audioLevels: (left: Float, right: Float) = (0, 0)
+    /// Set when the audio tap could not be opened — most likely a denied permission.
+    private(set) var audioErrorMessage: String?
 
     var effectiveBrightness: Double { preferences.effectiveBrightness() }
 
@@ -62,6 +75,7 @@ final class AppModel {
         tasks.append(Task { await self.watchForDevices() })
         tasks.append(Task { await self.followTheClock() })
         tasks.append(Task { await self.feedTheWatchdog() })
+        tasks.append(Task { await self.followTheAudio() })
         powerMonitor.start(onSleep: { [weak self] in self?.handleSleep() },
                            onWake: { [weak self] in self?.handleWake() })
         startControlServer()
@@ -148,7 +162,8 @@ final class AppModel {
     func previewBrightness(_ value: Double) {
         switch preferences.mode {
             case .color, .timeOfDay: Task { await apply(currentOutput, brightness: value) }
-            case .off, .signal: break
+            // Audio picks the new brightness up with its next frame, a thirtieth of a second later.
+            case .off, .signal, .audio: break
         }
     }
 
@@ -207,9 +222,65 @@ final class AppModel {
 
     /// Something else may have written to the device; if so, take it back.
     private func resyncIfTheDeviceDrifted() async {
+        // In audio mode the color changes every frame; there is no steady state to compare against.
+        guard preferences.mode != .audio else { return }
         guard !isAsleep, connection != nil, appliedOutput != nil else { return }
         guard await coordinator.needsResync(for: currentOutput, brightness: effectiveBrightness) else { return }
         appliedOutput = nil
+    }
+
+    /// Drives the LEDs from the system audio while that mode is selected.
+    ///
+    /// The tap is only opened while it is actually used: it is a system-wide audio capture, and
+    /// holding one open in the background would be rude.
+    private func followTheAudio() async {
+        var lastFrame = ContinuousClock.now
+        while !Task.isCancelled {
+            guard preferences.mode == .audio, !isAsleep, connection != nil else {
+                if audioTap.isRunning {
+                    audioTap.stop()
+                    audioMeter.reset()
+                    audioLevels = (0, 0)
+                }
+                try? await Task.sleep(for: .milliseconds(200))
+                continue
+            }
+
+            if !audioTap.isRunning {
+                do {
+                    try audioTap.start()
+                    audioErrorMessage = nil
+                    lastFrame = .now
+                } catch {
+                    audioErrorMessage = error.description
+                    preferences.mode = .off
+                    continue
+                }
+            }
+
+            let now = ContinuousClock.now
+            let elapsed = max((now - lastFrame).blink1Milliseconds, 1)
+            lastFrame = now
+
+            audioMeter.floorDecibels = Float(preferences.audioFloorDecibels)
+            let levels = audioMeter.update(with: audioTap.currentLevels, elapsed: Double(elapsed) / 1000)
+            audioLevels = levels
+
+            let brightness = effectiveBrightness
+            let left = Blink1.Color(audioLevel: levels.left).dimmed(to: brightness)
+            let right = Blink1.Color(audioLevel: levels.right).dimmed(to: brightness)
+            do {
+                try await coordinator.showLevels(left: left, right: right, fade: Self.audioFade)
+            } catch {
+                connection = nil
+                appliedOutput = nil
+            }
+
+            // The frame budget has to account for the USB traffic, or the loop drifts.
+            let spent = (ContinuousClock.now - now).blink1Milliseconds
+            let budget = Int(1000 / Self.audioFrameRate)
+            try? await Task.sleep(for: .milliseconds(max(budget - spent, 1)))
+        }
     }
 
     private func blipIfANewHourStarted() async {
