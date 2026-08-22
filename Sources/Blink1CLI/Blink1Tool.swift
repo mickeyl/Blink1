@@ -18,6 +18,7 @@ struct Blink1Tool: ParsableCommand {
           blink1 list --json                    enumerate attached devices
           blink1 bank install                   store the status signals in the device
           blink1 signal error                   let the device signal an error by itself
+          blink1 watch -- make release          blue while it runs, green or red when done
 
         EXIT CODES
 
@@ -31,6 +32,7 @@ struct Blink1Tool: ParsableCommand {
             StatusCommand.self,
             SignalCommand.self,
             ClearCommand.self,
+            WatchCommand.self,
             ClockCommand.self,
             AudioCommand.self,
             BankCommand.self,

@@ -212,6 +212,21 @@ be granted for this.
 It claims above everything else on purpose: a status taking the LED back mid-call would be a lie at
 the worst possible moment. Switch it off in the menu if you would rather not have it.
 
+### Wrapping a command
+
+`blink1 watch` runs something and shows how it went — blue while it runs, green or red when it is
+done. Output and exit code pass through untouched, so it can be wrapped around an existing
+invocation without changing anything else:
+
+```sh
+blink1 watch -- make release
+blink1 watch --source tests -- swift test      # a name of its own, so parallel runs coexist
+blink1 watch --keep 2min -- ./deploy.sh        # how long the result stays; --stay leaves it up
+```
+
+Interrupting it clears the claim rather than leaving a stale "busy" on the lamp. Without the app
+running it drives the device directly, so it works on a machine that has only the tool installed.
+
 ## Sources and priorities
 
 Several things want the LED at once, so nothing drives it directly: sources put in a claim and an
