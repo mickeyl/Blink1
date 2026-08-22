@@ -26,6 +26,9 @@ that are not in the official documentation because they were measured rather tha
 
 macOS 13 or later for the library and the tool, macOS 26 for the menu bar app. Swift 6.
 
+Building the app additionally needs [XcodeGen](https://github.com/yonaskolb/XcodeGen) and
+[Shark](https://github.com/kaandedeoglu/Shark) 2.2.0 or later; `make app` runs both.
+
 ## The tool
 
 ```sh
@@ -262,8 +265,9 @@ The app owns the device while it runs, so the CLI forwards to it instead of writ
 ```sh
 blink1 signal error       # goes to Blink1Bar if it is running, to the device otherwise
 blink1 set '#ff8800'
+blink1 clear              # withdraw a pushed status
 blink1 clock              # hand the LED back to the clock
-blink1 audio              # …or to the audio meter
+blink1 audio              # …or to the meters
 blink1 status             # what is it showing? --json for scripts
 blink1 signal ok --direct # bypass the app on purpose
 ```

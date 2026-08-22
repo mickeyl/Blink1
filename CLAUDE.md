@@ -51,10 +51,9 @@ XcodeGen writes here.
 The project lives in `App/` rather than the repository root so the package path and the project path
 differ; the package itself has to stay at the root to remain consumable by SwiftPM over a URL.
 
-Architecture: `AppModel` (@Observable, MainActor) turns settings plus the clock into one
-`DeviceOutput`; `Blink1Coordinator` (actor) is the only thing that touches the device, because a
-blink(1) answers one report at a time. Status sources land in `AppModel` later — the arbitration
-belongs there and nowhere else.
+Architecture: `AppModel` (@Observable, MainActor) collects what every source wants and hands the
+winner to `Blink1Coordinator` (actor), the only thing that touches the device — a blink(1) answers
+one report at a time.
 
 Two traps: `MenuBarExtra` builds its content view lazily on first click, so anything that must run at
 launch belongs in `Blink1BarApp.init()`, not in a `.task` on the menu. And the brightness slider must
@@ -82,17 +81,50 @@ a tie. `AppModel.currentOutput` reads from it rather than from `preferences.mode
 is just the `.ambient` claim, which is why switching modes and pushing a status no longer fight.
 
 Adding a source means claiming and withdrawing, nothing else. Two things to keep in mind: a claim
-with an expiry needs `expireClaims()` to hand the LED back (the audio loop happens to notice within a
-frame, quiet modes would not), and anything that pushes frame by frame — audio today — must check
-`currentOutput`, not the preference, or it will paint over a claim that outranks it.
+with an expiry needs `expireClaims()` to hand the LED back (a meter happens to notice within a frame,
+quiet modes would not), and anything that paints frame by frame must check `currentOutput`, not the
+preference, or it will paint over a claim that outranks it.
+
+The sources today:
+
+* `.ambient` — the mode picked in the menu. Lowest priority; everything else is measured against it.
+* `.external` or a name of its own — pushed in over the control channel (`--source ci`), priority
+  from the signal: `critical` is an alert, `error`/`failure`/`host-gone` ask for attention, the rest
+  are status.
+* `.inputActivity` — a live microphone or camera, claimed at `.alert`. It outranks everything on
+  purpose: a status taking the LED back mid-call would be a lie at the worst moment.
+
+`InputActivityMonitor` has to skip the app's own audio tap. That aggregate device carries an input
+stream, so the audio meter counted as somebody listening — which stopped the tap, cleared the claim,
+restarted the tap, and oscillated once a second.
+
+## Continuous meters (LiveMeter)
+
+Audio, system load and network throughput are one shape of thing: two channels, a level each, painted
+frame by frame. `LiveMeter` is what the single loop in `AppModel.followLiveMeter()` talks to; a meter
+brings its own frame rate, fade duration, colour ramp and channel labels.
+
+Rates are chosen against the hardware: a stereo frame costs two feature reports at ~3ms each and the
+firmware's fade engine ticks every 10ms, so 30/s is the ceiling worth having and the loop must
+subtract its own I/O time from the frame budget or it drifts. Slow meters (load, network at 2/s) lean
+on the device interpolating between frames.
+
+`AudioMeter` carries the parts that make the picture readable: the tap, an envelope with fast attack
+and slow release, and `AudioAutoTuner`, which reads the tenth and ninety-fifth percentile of the last
+half minute and sets sensitivity and dynamics from them a few times a minute. Moving a slider turns
+the tuner off.
 
 ## Control channel (Sources/Blink1Control)
 
 A Unix socket at `~/Library/Application Support/Blink1Bar/control.sock`, one JSON object per line,
-mode 0600. The app serves it, the CLI forwards `signal`/`set`/`off`/`status` through it, and
-`--direct` bypasses. Requests land in `AppModel.handle(_:)` and are mapped onto preferences, so
-whatever a script sets shows up in the menu — that function is where prioritised status sources will
-arbitrate later.
+mode 0600. The app serves it; the CLI forwards `signal`, `set`, `off`, `clear`, `clock`, `audio`,
+`status` and `watch` through it, and `--direct` bypasses. Requests land in `AppModel.handle(_:)`,
+where a signal becomes a claim (optionally named and time-limited) and a colour or mode change moves
+the ambient layer.
+
+`blink1 watch -- <command>` is the same channel from the outside: busy while the command runs,
+success or failure after, output and exit code passed through, and the claim cleared if it is
+interrupted. Its arguments are taken after the terminator, or `--help` would go to the command.
 
 ## Working on the protocol
 
