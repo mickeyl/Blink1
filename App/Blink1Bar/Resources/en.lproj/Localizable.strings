@@ -36,6 +36,12 @@
 "Sleep_OFF" = "Go dark";
 "Sleep_KEEP" = "Keep the light";
 
+/* Input activity */
+"Input_MICROPHONE" = "Microphone is live";
+"Input_CAMERA" = "Camera is live";
+"MenuContent_SIGNAL_INPUT" = "Signal a live microphone";
+"MenuContent_SIGNAL_INPUT_HELP" = "Turns the LED into an on-air lamp while any app is recording. Outranks everything else, so it cannot be hidden by a status.";
+
 /* Claims */
 "Claim_RELEASE" = "Release";
 "Claim_HELD_BY" = "held by %@";

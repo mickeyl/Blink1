@@ -15,6 +15,7 @@ final class AppModel {
             guard preferences != oldValue else { return }
             preferences.save()
             claimAmbient()
+            handleInputActivity(inputMonitor.activity)
             Task { await applyCurrentOutput() }
         }
     }
@@ -31,6 +32,7 @@ final class AppModel {
     private let coordinator = Blink1Coordinator()
     private let powerMonitor = PowerMonitor()
     private let controlServer = ControlServer()
+    private let inputMonitor = InputActivityMonitor()
     private let audioTap = SystemAudioTap()
     private var audioMeter = AudioLevelMeter()
     private var audioTuner = AudioAutoTuner()
@@ -85,8 +87,10 @@ final class AppModel {
     func claim(_ presentation: StatusClaim.Presentation,
                priority: StatusClaim.Priority,
                from source: StatusClaim.Source = .external,
+               label: String? = nil,
                for duration: Duration? = nil) {
-        arbiter.claim(.init(source: source, priority: priority, presentation: presentation, duration: duration))
+        arbiter.claim(.init(source: source, priority: priority, presentation: presentation,
+                            label: label, duration: duration))
         Task { await applyCurrentOutput() }
     }
 
@@ -123,6 +127,26 @@ final class AppModel {
         powerMonitor.start(onSleep: { [weak self] in self?.handleSleep() },
                            onWake: { [weak self] in self?.handleWake() })
         startControlServer()
+        inputMonitor.start(ignoring: { [weak self] in
+            guard let deviceID = self?.audioTap.deviceID else { return [] }
+            return [deviceID]
+        }, onChange: { [weak self] activity in
+            self?.handleInputActivity(activity)
+        })
+    }
+
+    /// A live microphone is the one thing the lamp says to the room rather than to its owner, so it
+    /// claims above everything else: an error taking the LED back mid-call would be a lie at the
+    /// worst possible moment.
+    private func handleInputActivity(_ activity: InputActivityMonitor.Activity) {
+        guard preferences.signalsInputActivity, activity.isActive else {
+            withdrawClaim(from: .inputActivity)
+            return
+        }
+        claim(.color(Blink1.Color(red: 255, green: 0, blue: 0)),
+              priority: .alert,
+              from: .inputActivity,
+              label: activity.microphone ? R.L.Input_MICROPHONE : R.L.Input_CAMERA)
     }
 
     /// Lets scripts and the CLI report status instead of fighting over the device.
@@ -142,6 +166,7 @@ final class AppModel {
         tasks.removeAll()
         powerMonitor.stop()
         controlServer.stop()
+        inputMonitor.stop()
     }
 
     /// Called on the way out: a deliberate quit is not a fault, so the watchdog must not fire.

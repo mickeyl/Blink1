@@ -34,6 +34,12 @@
 "Sleep_OFF" = "Ausschalten";
 "Sleep_KEEP" = "Leuchten lassen";
 
+/* Ein- und Ausgabe */
+"Input_MICROPHONE" = "Mikrofon ist aktiv";
+"Input_CAMERA" = "Kamera ist aktiv";
+"MenuContent_SIGNAL_INPUT" = "Aktives Mikrofon anzeigen";
+"MenuContent_SIGNAL_INPUT_HELP" = "Macht die LED zur Aufnahmeleuchte, solange eine App mithört. Steht über allem anderen und kann daher nicht von einem Status verdeckt werden.";
+
 /* Ansprüche */
 "Claim_RELEASE" = "Freigeben";
 "Claim_HELD_BY" = "belegt von %@";

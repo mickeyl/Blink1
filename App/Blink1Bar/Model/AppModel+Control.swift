@@ -47,14 +47,22 @@ extension AppModel {
         return status()
     }
 
+    /// Reports what is actually on the device, which is the winning claim — not the mode the menu
+    /// happens to point at.
     private func status() -> ControlResponse {
-        if let claim = externalClaim, case .signal(let signal) = claim.presentation {
-            let remaining = claim.expiresAt.map { ", \(max(Int($0.timeIntervalSinceNow), 0))s left" } ?? ""
-            return ControlResponse(ok: true, mode: "signal",
-                                   detail: "\(signal) (\(claim.source)\(remaining))",
-                                   device: connection?.serialNumber)
+        guard let claim = externalClaim else { return ambientStatus() }
+
+        let remaining = claim.expiresAt.map { ", \(max(Int($0.timeIntervalSinceNow), 0))s left" } ?? ""
+        let shown: (mode: String, what: String) = switch claim.presentation {
+            case .signal(let signal): ("signal", signal.rawValue)
+            case .color(let color): ("color", claim.label ?? color.hexString)
+            case .audio: ("audio", claim.label ?? "")
+            case .off: ("off", claim.label ?? "")
         }
-        return ambientStatus()
+        let detail = shown.what.isEmpty
+            ? "(\(claim.source)\(remaining))"
+            : "\(shown.what) (\(claim.source)\(remaining))"
+        return ControlResponse(ok: true, mode: shown.mode, detail: detail, device: connection?.serialNumber)
     }
 
     private func ambientStatus() -> ControlResponse {

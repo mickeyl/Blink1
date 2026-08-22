@@ -39,6 +39,12 @@ nonisolated final class SystemAudioTap {
 
     var currentLevels: Levels { levels.withLock { $0 } }
 
+    /// The aggregate device carrying the tap. It has an input stream, so anything looking for a live
+    /// microphone has to know to skip it — otherwise this app watching the output counts as one.
+    var deviceID: AudioObjectID? {
+        aggregateID == AudioObjectID(kAudioObjectUnknown) ? nil : aggregateID
+    }
+
     var isRunning: Bool { ioProcID != nil }
 
     deinit { stop() }

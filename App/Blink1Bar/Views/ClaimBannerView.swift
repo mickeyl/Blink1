@@ -38,7 +38,8 @@ struct ClaimBannerView: View {
     }
 
     private var headline: String {
-        switch claim.presentation {
+        if let label = claim.label { return label }
+        return switch claim.presentation {
             case .signal(let signal): signal.localizedName
             case .color(let color): color.hexString
             case .audio: R.L.MenuContent_MODE_AUDIO

@@ -42,6 +42,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var nightStartHour: Int = 22
     var nightEndHour: Int = 7
     var nightBrightness: Double = 0.15
+    /// Turns the LED into an on-air lamp while the microphone or camera is live.
+    var signalsInputActivity: Bool = true
     var sleepBehavior: SleepBehavior = .off
     /// Arms the device-side watchdog while the app runs, so a crash shows up as `host-gone` instead
     /// of a light that quietly keeps lying.

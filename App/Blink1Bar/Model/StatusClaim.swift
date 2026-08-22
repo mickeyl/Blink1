@@ -11,6 +11,8 @@ struct StatusClaim: Identifiable, Equatable {
     let source: Source
     let priority: Priority
     let presentation: Presentation
+    /// What to call this in the menu; without it the presentation has to speak for itself.
+    let label: String?
     let claimedAt: Date
     /// When the claim lapses on its own; nil means it stands until withdrawn.
     let expiresAt: Date?
@@ -20,11 +22,13 @@ struct StatusClaim: Identifiable, Equatable {
     init(source: Source,
          priority: Priority,
          presentation: Presentation,
+         label: String? = nil,
          claimedAt: Date = .now,
          duration: Duration? = nil) {
         self.source = source
         self.priority = priority
         self.presentation = presentation
+        self.label = label
         self.claimedAt = claimedAt
         self.expiresAt = duration.map { claimedAt.addingTimeInterval(Double($0.blink1Milliseconds) / 1000) }
     }
@@ -46,6 +50,8 @@ struct StatusClaim: Identifiable, Equatable {
         static let ambient = Source(rawValue: "ambient")
         /// Anything pushed in from outside that did not name itself.
         static let external = Source(rawValue: "external")
+        /// A live microphone or camera.
+        static let inputActivity = Source(rawValue: "input")
 
         var description: String { rawValue }
     }

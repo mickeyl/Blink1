@@ -27,6 +27,12 @@ struct GeneralSectionView: View {
                     .font(.caption)
             }
 
+            Toggle(isOn: $model.preferences.signalsInputActivity) {
+                Text(R.L.MenuContent_SIGNAL_INPUT)
+            }
+            .toggleStyle(.checkbox)
+            .help(R.L.MenuContent_SIGNAL_INPUT_HELP)
+
             Toggle(isOn: $model.preferences.armsWatchdog) {
                 Text(R.L.MenuContent_WATCHDOG)
             }

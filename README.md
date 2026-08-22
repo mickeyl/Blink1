@@ -203,6 +203,15 @@ blink1 raw 63 ff 00 00 00 0a 00  # 'c' — fade to red over 100ms
 .package(url: "https://github.com/mickeyl/Blink1", from: "1.0.0"),
 ```
 
+### On-air lamp
+
+While any app is recording, the LED turns steady red — the one thing it says to the room rather than
+to its owner. Core Audio answers whether an input is live without any permission, so nothing has to
+be granted for this.
+
+It claims above everything else on purpose: a status taking the LED back mid-call would be a lie at
+the worst possible moment. Switch it off in the menu if you would rather not have it.
+
 ## Sources and priorities
 
 Several things want the LED at once, so nothing drives it directly: sources put in a claim and an
