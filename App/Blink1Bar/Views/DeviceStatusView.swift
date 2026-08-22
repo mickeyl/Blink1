@@ -9,15 +9,23 @@ struct DeviceStatusView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let connection = model.connection {
-                Text(connection.productName)
-                    .font(.headline)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(connection.productName)
+                        .font(.headline)
+                    Spacer(minLength: 8)
+                    appVersion
+                }
                 Text(R.L.Device_DETAILS(connection.serialNumber, connection.firmware))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Label(model.lastErrorMessage ?? R.L.Device_NONE_ATTACHED, systemImage: "exclamationmark.triangle")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Label(model.lastErrorMessage ?? R.L.Device_NONE_ATTACHED, systemImage: "exclamationmark.triangle")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    appVersion
+                }
             }
 
             if model.attachedDevices.count > 1 {
@@ -30,6 +38,14 @@ struct DeviceStatusView: View {
                 .font(.callout)
             }
         }
+    }
+
+    /// Trailing on the first line, quiet enough not to compete with the device it sits next to.
+    private var appVersion: some View {
+        Text(verbatim: "v\(Bundle.main.shortVersion)")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .monospacedDigit()
     }
 
     private var deviceSelection: Binding<String?> {
