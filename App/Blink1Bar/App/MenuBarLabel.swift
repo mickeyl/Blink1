@@ -5,8 +5,8 @@ import SwiftUI
 /// The status item itself: a dot in the color the LED currently shows.
 ///
 /// Menu bar labels are rendered as template images, which would throw the color away — hence the
-/// hand-drawn `NSImage` with `isTemplate` off. Without a device the symbol goes back to template
-/// rendering so it follows the menu bar's own appearance.
+/// hand-drawn `NSImage` with `isTemplate` off. Unplug the device and the same dot comes back struck
+/// through, as a template symbol that follows the menu bar's own appearance.
 struct MenuBarLabel: View {
 
     let color: Blink1.Color
@@ -16,7 +16,7 @@ struct MenuBarLabel: View {
         if isConnected {
             Image(nsImage: Self.dot(for: color))
         } else {
-            Image(systemName: "lightbulb.slash")
+            Image(systemName: "circle.slash")
         }
     }
 

@@ -73,6 +73,23 @@ struct DeviceTests {
         #expect(try device.readNoteText(id: 0) == "blink1 swift test")
     }
 
+    /// What a device being unplugged looks like from the inside: the handle is still there, every
+    /// transfer fails. Nothing may trap — the app keeps running and shows a struck-through icon.
+    @Test("reports errors instead of trapping once the device is gone")
+    func survivesTheDeviceGoingAway() throws {
+        let device = try Blink1.open()
+        device.close()
+
+        #expect(throws: Blink1Error.self) { try device.setColor(.red) }
+        #expect(throws: Blink1Error.self) { try device.fade(to: .green, over: .milliseconds(100), led: .top) }
+        #expect(throws: Blink1Error.self) { try device.show(.error) }
+        #expect(throws: Blink1Error.self) { _ = try device.readColor() }
+        #expect(throws: Blink1Error.self) { _ = try device.readPlayState() }
+        #expect(throws: Blink1Error.self) { try device.armWatchdog(timeout: .seconds(30)) }
+        // Closing twice is what the app does when it notices the device is gone.
+        device.close()
+    }
+
     @Test("has a chip id", .enabled(if: Blink1.discover().first?.model.supportsNotes == true))
     func chipID() throws {
         #expect(try device.chipID().count >= 8)
