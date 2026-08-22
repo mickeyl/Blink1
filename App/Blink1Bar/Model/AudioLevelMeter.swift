@@ -12,22 +12,49 @@ struct AudioLevelMeter {
     /// Where the scale bottoms out. Quieter than this reads as silence.
     var floorDecibels: Float = -50
 
+    /// Spreads what little dynamic range modern masters leave. See `expand(_:)`.
+    var expansion: Float = 1
+
     private var attackSeconds: Float = 0.01
     private var releaseSeconds: Float = 0.25
+    /// Tracks where the music currently sits, so expansion has something to pivot around.
+    private var averageSeconds: Float = 2.5
+    private var average: Float = 0
     private var left: Float = 0
     private var right: Float = 0
 
     /// - Parameter elapsed: time since the last update, so the envelope is frame-rate independent.
     /// - Returns: both channels on a 0…1 scale.
     mutating func update(with levels: SystemAudioTap.Levels, elapsed: TimeInterval) -> (left: Float, right: Float) {
-        left = follow(left, target: normalized(levels.left), elapsed: Float(elapsed))
-        right = follow(right, target: normalized(levels.right), elapsed: Float(elapsed))
+        let elapsed = Float(elapsed)
+        let normalizedLeft = normalized(levels.left)
+        let normalizedRight = normalized(levels.right)
+
+        // One average for both channels: the difference between them is the stereo image, and
+        // levelling the channels separately would flatten it away.
+        let coefficient = 1 - exp(-elapsed / averageSeconds)
+        average += ((normalizedLeft + normalizedRight) / 2 - average) * coefficient
+
+        left = follow(left, target: expand(normalizedLeft), elapsed: elapsed)
+        right = follow(right, target: expand(normalizedRight), elapsed: elapsed)
         return (left, right)
     }
 
     mutating func reset() {
         left = 0
         right = 0
+        average = 0
+    }
+
+    /// Pushes the display away from where the music sits.
+    ///
+    /// Modern masters are compressed to within a few decibels, so an absolute scale parks the whole
+    /// programme in one colour and nothing ever moves. Expanding around the running average trades
+    /// the absolute reading — mid-scale now means "average for this track" — for the relative
+    /// dynamics that are still in there. At 1 the meter is absolute again.
+    private func expand(_ level: Float) -> Float {
+        guard expansion > 1 else { return level }
+        return min(max(0.5 + (level - average) * expansion, 0), 1)
     }
 
     private func normalized(_ rms: Float) -> Float {

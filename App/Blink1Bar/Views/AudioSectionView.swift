@@ -7,6 +7,7 @@ struct AudioSectionView: View {
     @Environment(AppModel.self) private var model
 
     @State private var floorDecibels: Double = -50
+    @State private var expansion: Double = 2.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -37,8 +38,25 @@ struct AudioSectionView: View {
                     .frame(width: 52, alignment: .trailing)
             }
             .font(.callout)
+
+            HStack {
+                Text(R.L.Audio_DYNAMICS)
+                Slider(value: $expansion, in: 1...6) { editing in
+                    guard !editing else { return }
+                    model.preferences.audioExpansion = expansion
+                }
+                Text(verbatim: String(format: "%.1f×", expansion))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .frame(width: 52, alignment: .trailing)
+            }
+            .font(.callout)
+            .help(R.L.Audio_DYNAMICS_HELP)
         }
-        .onAppear { floorDecibels = model.preferences.audioFloorDecibels }
+        .onAppear {
+            floorDecibels = model.preferences.audioFloorDecibels
+            expansion = model.preferences.audioExpansion
+        }
     }
 
     /// The ramp the LEDs run through, drawn from the very function that feeds them.

@@ -263,6 +263,7 @@ final class AppModel {
             lastFrame = now
 
             audioMeter.floorDecibels = Float(preferences.audioFloorDecibels)
+            audioMeter.expansion = Float(preferences.audioExpansion)
             let levels = audioMeter.update(with: audioTap.currentLevels, elapsed: Double(elapsed) / 1000)
             audioLevels = levels
 

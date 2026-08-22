@@ -38,6 +38,8 @@
 "MenuContent_MODE_AUDIO" = "Audio";
 "Audio_EXPLANATION" = "Die LEDs folgen dem Systemton: oben der linke Kanal, unten der rechte.";
 "Audio_SENSITIVITY" = "Empfindlichkeit";
+"Audio_DYNAMICS" = "Dynamik";
+"Audio_DYNAMICS_HELP" = "Spreizt den Pegelbereich um den aktuellen Mittelwert der Musik. Bei 1× zeigt das Instrument die absolute Lautstärke.";
 
 /* Signale */
 "Signal_OFF" = "Aus";

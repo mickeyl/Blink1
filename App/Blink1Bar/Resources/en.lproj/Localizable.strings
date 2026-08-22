@@ -40,6 +40,8 @@
 "MenuContent_MODE_AUDIO" = "Audio";
 "Audio_EXPLANATION" = "The LEDs follow the system audio: top is the left channel, bottom the right.";
 "Audio_SENSITIVITY" = "Sensitivity";
+"Audio_DYNAMICS" = "Dynamics";
+"Audio_DYNAMICS_HELP" = "Spreads the level range around what the music currently averages. At 1× the meter reads absolute loudness.";
 
 /* Signals */
 "Signal_OFF" = "Off";

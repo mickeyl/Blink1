@@ -34,6 +34,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var blipOnTheHour: Bool = true
     /// Where the audio meter bottoms out, in dBFS. Quieter than this reads as silence.
     var audioFloorDecibels: Double = -50
+    /// How far the meter spreads the dynamics it is given; 1 keeps the scale absolute.
+    var audioExpansion: Double = 2.5
     var dimsAtNight: Bool = true
     var nightStartHour: Int = 22
     var nightEndHour: Int = 7

@@ -121,6 +121,11 @@ is worth knowing when the meters stay at zero. Levels are RMS on a decibel scale
 and a slow release, so the display follows the music instead of twitching. The tap is only open while
 the mode is selected.
 
+Modern masters are compressed into a few decibels, and an absolute scale parks all of that in one
+colour. The **Dynamics** control spreads the level around what the music currently averages: at 1×
+the meter reads absolute loudness, at the default 2.5× a typical track swings across roughly twice
+the range — measured on radio programme material, 38–55 % became 45–86 %.
+
 Brightness applies to every mode, with an optional night-time reduction between two hours. It can
 start at login, turns the LED dark while the Mac sleeps (or leaves it, your choice) and reconnects on
 wake — the device may have been re-enumerated in between. It re-arms the device-side watchdog every
