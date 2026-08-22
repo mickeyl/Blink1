@@ -10,7 +10,9 @@ struct AudioSectionView: View {
     @State private var expansion: Double = 2.5
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        @Bindable var model = model
+
+        return VStack(alignment: .leading, spacing: 8) {
             if let message = model.audioErrorMessage {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .font(.caption)
@@ -26,10 +28,19 @@ struct AudioSectionView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Toggle(isOn: $model.preferences.audioAutoAdjusts) {
+                Text(R.L.Audio_AUTOMATIC)
+            }
+            .toggleStyle(.checkbox)
+            .font(.callout)
+            .help(R.L.Audio_AUTOMATIC_HELP)
+
             HStack {
                 Text(R.L.Audio_SENSITIVITY)
                 Slider(value: $floorDecibels, in: -70 ... -25) { editing in
                     guard !editing else { return }
+                    // Touching a slider means taking over.
+                    model.preferences.audioAutoAdjusts = false
                     model.preferences.audioFloorDecibels = floorDecibels
                 }
                 Text(verbatim: "\(Int(floorDecibels)) dB")
@@ -43,6 +54,7 @@ struct AudioSectionView: View {
                 Text(R.L.Audio_DYNAMICS)
                 Slider(value: $expansion, in: 1...6) { editing in
                     guard !editing else { return }
+                    model.preferences.audioAutoAdjusts = false
                     model.preferences.audioExpansion = expansion
                 }
                 Text(verbatim: String(format: "%.1f×", expansion))
@@ -53,10 +65,15 @@ struct AudioSectionView: View {
             .font(.callout)
             .help(R.L.Audio_DYNAMICS_HELP)
         }
-        .onAppear {
-            floorDecibels = model.preferences.audioFloorDecibels
-            expansion = model.preferences.audioExpansion
-        }
+        .onAppear { readSettings() }
+        // While the tuner has the wheel, the sliders follow it rather than sit there lying.
+        .onChange(of: model.audioFloorDecibels) { _, _ in readSettings() }
+        .onChange(of: model.audioExpansion) { _, _ in readSettings() }
+    }
+
+    private func readSettings() {
+        floorDecibels = model.audioFloorDecibels
+        expansion = model.audioExpansion
     }
 
     /// The ramp the LEDs run through, drawn from the very function that feeds them.

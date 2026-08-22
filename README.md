@@ -123,8 +123,14 @@ the mode is selected.
 
 Modern masters are compressed into a few decibels, and an absolute scale parks all of that in one
 colour. The **Dynamics** control spreads the level around what the music currently averages: at 1×
-the meter reads absolute loudness, at the default 2.5× a typical track swings across roughly twice
-the range — measured on radio programme material, 38–55 % became 45–86 %.
+the meter reads absolute loudness, at 2.5× a typical track swings across roughly twice the range —
+measured on radio programme material, 38–55 % became 45–86 %.
+
+Left to itself the meter finds both settings on its own: it keeps the level distribution of the last
+half minute and derives them from two percentiles a few times a minute — the tenth for where quiet
+sits, the ninety-fifth for the peaks — then ramps over three seconds so the re-scaling is invisible.
+On the same radio material it settled on −39 dB and 1.3×, having moved the floor up to just under the
+programme rather than spreading a scale that was mostly empty. Moving a slider takes over.
 
 Brightness applies to every mode, with an optional night-time reduction between two hours. It can
 start at login, turns the LED dark while the Mac sleeps (or leaves it, your choice) and reconnects on

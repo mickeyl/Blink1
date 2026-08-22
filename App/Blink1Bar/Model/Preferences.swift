@@ -36,6 +36,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var audioFloorDecibels: Double = -50
     /// How far the meter spreads the dynamics it is given; 1 keeps the scale absolute.
     var audioExpansion: Double = 2.5
+    /// Lets the meter read the material and set the two above itself.
+    var audioAutoAdjusts: Bool = true
     var dimsAtNight: Bool = true
     var nightStartHour: Int = 22
     var nightEndHour: Int = 7

@@ -33,6 +33,9 @@ final class AppModel {
     private let controlServer = ControlServer()
     private let audioTap = SystemAudioTap()
     private var audioMeter = AudioLevelMeter()
+    private var audioTuner = AudioAutoTuner()
+    /// What the tuner is aiming for; the effective values ramp towards it.
+    private var audioTarget: AudioAutoTuner.Settings?
     private var appliedOutput: DeviceOutput?
     private var appliedBrightness: Double?
     private var lastBlipHour: Int?
@@ -100,6 +103,9 @@ final class AppModel {
 
     /// The most recent stereo pair, for the meters in the menu.
     private(set) var audioLevels: (left: Float, right: Float) = (0, 0)
+    /// The settings in force right now — the preferences, or what the tuner made of them.
+    private(set) var audioFloorDecibels: Double = -50
+    private(set) var audioExpansion: Double = 2.5
     /// Set when the audio tap could not be opened — most likely a denied permission.
     private(set) var audioErrorMessage: String?
 
@@ -293,6 +299,7 @@ final class AppModel {
                 if audioTap.isRunning {
                     audioTap.stop()
                     audioMeter.reset()
+                    audioTuner.reset()
                     audioLevels = (0, 0)
                 }
                 try? await Task.sleep(for: .milliseconds(200))
@@ -315,9 +322,11 @@ final class AppModel {
             let elapsed = max((now - lastFrame).blink1Milliseconds, 1)
             lastFrame = now
 
-            audioMeter.floorDecibels = Float(preferences.audioFloorDecibels)
-            audioMeter.expansion = Float(preferences.audioExpansion)
-            let levels = audioMeter.update(with: audioTap.currentLevels, elapsed: Double(elapsed) / 1000)
+            let raw = audioTap.currentLevels
+            tuneAudio(with: raw, elapsed: Double(elapsed) / 1000)
+            audioMeter.floorDecibels = Float(audioFloorDecibels)
+            audioMeter.expansion = Float(audioExpansion)
+            let levels = audioMeter.update(with: raw, elapsed: Double(elapsed) / 1000)
             audioLevels = levels
 
             let brightness = effectiveBrightness
@@ -335,6 +344,32 @@ final class AppModel {
             let budget = Int(1000 / Self.audioFrameRate)
             try? await Task.sleep(for: .milliseconds(max(budget - spent, 1)))
         }
+    }
+
+    /// Keeps the two audio settings current: straight from the preferences by hand, or ramped
+    /// towards what the tuner read off the material.
+    ///
+    /// Ramped rather than set: a proposal every twenty seconds would otherwise be a visible jolt,
+    /// and the point of adjusting automatically is that nobody notices it happening.
+    private func tuneAudio(with levels: SystemAudioTap.Levels, elapsed: TimeInterval) {
+        guard preferences.audioAutoAdjusts else {
+            audioFloorDecibels = preferences.audioFloorDecibels
+            audioExpansion = preferences.audioExpansion
+            audioTarget = nil
+            return
+        }
+
+        audioTuner.record(left: levels.left, right: levels.right)
+        if let proposal = audioTuner.proposal() {
+            audioTarget = proposal
+        }
+        guard let target = audioTarget else { return }
+
+        // A three second ramp: slow enough to be invisible, quick enough to have arrived before the
+        // next proposal.
+        let step = min(elapsed / 3, 1)
+        audioFloorDecibels += (Double(target.floorDecibels) - audioFloorDecibels) * step
+        audioExpansion += (Double(target.expansion) - audioExpansion) * step
     }
 
     private func blipIfANewHourStarted() async {
