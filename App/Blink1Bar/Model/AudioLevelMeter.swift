@@ -15,6 +15,9 @@ struct AudioLevelMeter {
     /// Spreads what little dynamic range modern masters leave. See `expand(_:)`.
     var expansion: Float = 1
 
+    /// The share of the scale over which an expanded reading fades out towards silence.
+    private static let gateSpan: Float = 0.15
+
     private var attackSeconds: Float = 0.01
     private var releaseSeconds: Float = 0.25
     /// Tracks where the music currently sits, so expansion has something to pivot around.
@@ -54,7 +57,12 @@ struct AudioLevelMeter {
     /// dynamics that are still in there. At 1 the meter is absolute again.
     private func expand(_ level: Float) -> Float {
         guard expansion > 1 else { return level }
-        return min(max(0.5 + (level - average) * expansion, 0), 1)
+        let expanded = min(max(0.5 + (level - average) * expansion, 0), 1)
+        // Silence sits at the pivot too: with nothing playing both the level and the average fall to
+        // zero and the meter parks at mid-scale. Fading the expanded reading back into silence over
+        // the bottom of the scale keeps the relative picture where there is one and lets an idle
+        // meter go dark.
+        return expanded * min(level / Self.gateSpan, 1)
     }
 
     private func normalized(_ rms: Float) -> Float {
