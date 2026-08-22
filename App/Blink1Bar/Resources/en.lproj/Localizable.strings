@@ -47,9 +47,16 @@
 "Claim_HELD_BY" = "held by %@";
 "Claim_HELD_UNTIL" = "held by %@, %d s left";
 
+/* Meters */
+"MenuContent_MODE_METER" = "Meter";
+"Meter_AUDIO" = "Audio";
+"Meter_LOAD" = "Load";
+"Meter_NETWORK" = "Network";
+"Meter_AUDIO_EXPLANATION" = "The LEDs follow the system audio: top is the left channel, bottom the right.";
+"Meter_LOAD_EXPLANATION" = "Top LED is processor use, bottom is memory in use.";
+"Meter_NETWORK_EXPLANATION" = "Top LED is incoming (%@), bottom outgoing (%@), on a logarithmic scale.";
+
 /* Audio */
-"MenuContent_MODE_AUDIO" = "Audio";
-"Audio_EXPLANATION" = "The LEDs follow the system audio: top is the left channel, bottom the right.";
 "Audio_AUTOMATIC" = "Adjust automatically";
 "Audio_AUTOMATIC_HELP" = "Reads the level distribution of the last half minute and sets sensitivity and dynamics from it, a few times a minute. Moving a slider takes over.";
 "Audio_SENSITIVITY" = "Sensitivity";

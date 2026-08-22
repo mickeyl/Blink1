@@ -42,7 +42,7 @@ struct ClaimBannerView: View {
         return switch claim.presentation {
             case .signal(let signal): signal.localizedName
             case .color(let color): color.hexString
-            case .audio: R.L.MenuContent_MODE_AUDIO
+            case .meter: R.L.MenuContent_MODE_METER
             case .off: R.L.MenuContent_MODE_OFF
         }
     }

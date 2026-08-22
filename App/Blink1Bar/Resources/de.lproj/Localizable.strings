@@ -45,9 +45,16 @@
 "Claim_HELD_BY" = "belegt von %@";
 "Claim_HELD_UNTIL" = "belegt von %@, noch %d s";
 
+/* Messwerke */
+"MenuContent_MODE_METER" = "Messwerk";
+"Meter_AUDIO" = "Audio";
+"Meter_LOAD" = "Last";
+"Meter_NETWORK" = "Netz";
+"Meter_AUDIO_EXPLANATION" = "Die LEDs folgen dem Systemton: oben der linke Kanal, unten der rechte.";
+"Meter_LOAD_EXPLANATION" = "Obere LED zeigt die Prozessorlast, untere den belegten Speicher.";
+"Meter_NETWORK_EXPLANATION" = "Obere LED ist eingehend (%@), untere ausgehend (%@), logarithmisch skaliert.";
+
 /* Audio */
-"MenuContent_MODE_AUDIO" = "Audio";
-"Audio_EXPLANATION" = "Die LEDs folgen dem Systemton: oben der linke Kanal, unten der rechte.";
 "Audio_AUTOMATIC" = "Automatisch anpassen";
 "Audio_AUTOMATIC_HELP" = "Liest die Pegelverteilung der letzten halben Minute und setzt Empfindlichkeit und Dynamik danach, ein paar Mal pro Minute. Wer einen Regler bewegt, übernimmt.";
 "Audio_SENSITIVITY" = "Empfindlichkeit";

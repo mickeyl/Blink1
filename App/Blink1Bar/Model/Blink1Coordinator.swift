@@ -90,7 +90,7 @@ actor Blink1Coordinator {
                     let expected = color.dimmed(to: brightness)
                     let actual = try device.readColor().color
                     return !Self.isClose(actual, expected)
-                case .audio:
+                case .meter:
                     return false
                 case .signal(let signal):
                     // A signal is a running pattern: the range it plays is the thing to compare.
@@ -132,7 +132,7 @@ actor Blink1Coordinator {
                 // Stop first: a running pattern would paint over the color a moment later.
                 try device.stop()
                 try device.fade(to: color.dimmed(to: brightness), over: .milliseconds(250))
-            case .audio:
+            case .meter:
                 // Nothing to show yet: stop the pattern player so it cannot paint over the levels
                 // that are about to be pushed frame by frame.
                 try device.stop()

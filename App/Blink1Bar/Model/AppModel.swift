@@ -15,6 +15,7 @@ final class AppModel {
             guard preferences != oldValue else { return }
             preferences.save()
             claimAmbient()
+            syncMeterSettings()
             handleInputActivity(inputMonitor.activity)
             Task { await applyCurrentOutput() }
         }
@@ -33,11 +34,11 @@ final class AppModel {
     private let powerMonitor = PowerMonitor()
     private let controlServer = ControlServer()
     private let inputMonitor = InputActivityMonitor()
-    private let audioTap = SystemAudioTap()
-    private var audioMeter = AudioLevelMeter()
-    private var audioTuner = AudioAutoTuner()
-    /// What the tuner is aiming for; the effective values ramp towards it.
-    private var audioTarget: AudioAutoTuner.Settings?
+
+    /// The continuous meters. Whichever one the winning claim names gets driven, the rest stay shut.
+    let audioMeter = AudioMeter()
+    let systemLoadMeter = SystemLoadMeter()
+    let networkMeter = NetworkMeter()
     private var appliedOutput: DeviceOutput?
     private var appliedBrightness: Double?
     private var lastBlipHour: Int?
@@ -50,12 +51,19 @@ final class AppModel {
 
     /// 30 frames a second: the device needs 6ms for a stereo frame and interpolates the rest, while
     /// its fade engine only ticks every 10ms — going faster would cost USB traffic for nothing.
-    private static let audioFrameRate = 30.0
-    private static let audioFade = Duration.milliseconds(40)
+
 
     init() {
         self.preferences = .load()
         claimAmbient()
+        syncMeterSettings()
+    }
+
+    /// The sliders live in the preferences, the meter does the work with them.
+    private func syncMeterSettings() {
+        audioMeter.manualFloorDecibels = preferences.audioFloorDecibels
+        audioMeter.manualExpansion = preferences.audioExpansion
+        audioMeter.adjustsAutomatically = preferences.audioAutoAdjusts
     }
 
     /// The mode picked in the menu is a claim like any other — the one everything else outranks.
@@ -65,7 +73,7 @@ final class AppModel {
             case .color: .color(preferences.staticColor)
             case .signal: .signal(preferences.signal)
             case .timeOfDay: .color(timeOfDayColor)
-            case .audio: .audio
+            case .meter: .meter(preferences.meterKind)
         }
         arbiter.claim(.init(source: .ambient, priority: .ambient, presentation: presentation))
     }
@@ -105,13 +113,14 @@ final class AppModel {
         Task { await applyCurrentOutput() }
     }
 
-    /// The most recent stereo pair, for the meters in the menu.
-    private(set) var audioLevels: (left: Float, right: Float) = (0, 0)
-    /// The settings in force right now — the preferences, or what the tuner made of them.
-    private(set) var audioFloorDecibels: Double = -50
-    private(set) var audioExpansion: Double = 2.5
-    /// Set when the audio tap could not be opened — most likely a denied permission.
-    private(set) var audioErrorMessage: String?
+    /// The meter behind a `.meter` presentation.
+    func meter(for kind: LiveMeterKind) -> any LiveMeter {
+        switch kind {
+            case .audio: audioMeter
+            case .systemLoad: systemLoadMeter
+            case .network: networkMeter
+        }
+    }
 
     var effectiveBrightness: Double { preferences.effectiveBrightness() }
 
@@ -122,13 +131,13 @@ final class AppModel {
         tasks.append(Task { await self.watchForDevices() })
         tasks.append(Task { await self.followTheClock() })
         tasks.append(Task { await self.feedTheWatchdog() })
-        tasks.append(Task { await self.followTheAudio() })
+        tasks.append(Task { await self.followLiveMeter() })
         tasks.append(Task { await self.expireClaims() })
         powerMonitor.start(onSleep: { [weak self] in self?.handleSleep() },
                            onWake: { [weak self] in self?.handleWake() })
         startControlServer()
         inputMonitor.start(ignoring: { [weak self] in
-            guard let deviceID = self?.audioTap.deviceID else { return [] }
+            guard let deviceID = self?.audioMeter.deviceID else { return [] }
             return [deviceID]
         }, onChange: { [weak self] activity in
             self?.handleInputActivity(activity)
@@ -232,7 +241,7 @@ final class AppModel {
         switch preferences.mode {
             case .color, .timeOfDay: Task { await apply(currentOutput, brightness: value) }
             // Audio picks the new brightness up with its next frame, a thirtieth of a second later.
-            case .off, .signal, .audio: break
+            case .off, .signal, .meter: break
         }
     }
 
@@ -292,8 +301,8 @@ final class AppModel {
 
     /// Something else may have written to the device; if so, take it back.
     private func resyncIfTheDeviceDrifted() async {
-        // In audio mode the color changes every frame; there is no steady state to compare against.
-        guard currentOutput != .audio else { return }
+        // A meter changes colour every frame; there is no steady state to compare against.
+        if case .meter = currentOutput { return }
         guard !isAsleep, connection != nil, appliedOutput != nil else { return }
         guard await coordinator.needsResync(for: currentOutput, brightness: effectiveBrightness) else { return }
         appliedOutput = nil
@@ -313,32 +322,34 @@ final class AppModel {
         }
     }
 
-    /// Drives the LEDs from the system audio while that mode is selected.
+    /// Drives whichever continuous meter the winning claim names.
     ///
-    /// The tap is only opened while it is actually used: it is a system-wide audio capture, and
-    /// holding one open in the background would be rude.
-    private func followTheAudio() async {
+    /// The meter is only started while it is actually showing: a system audio tap or a counter left
+    /// running in the background would be work nobody asked for.
+    private func followLiveMeter() async {
+        var running: LiveMeterKind?
         var lastFrame = ContinuousClock.now
+
         while !Task.isCancelled {
-            guard currentOutput == .audio, !isAsleep, connection != nil else {
-                if audioTap.isRunning {
-                    audioTap.stop()
-                    audioMeter.reset()
-                    audioTuner.reset()
-                    audioLevels = (0, 0)
+            guard case .meter(let kind) = currentOutput, !isAsleep, connection != nil else {
+                if let previous = running {
+                    meter(for: previous).stop()
+                    running = nil
                 }
                 try? await Task.sleep(for: .milliseconds(200))
                 continue
             }
 
-            if !audioTap.isRunning {
+            let meter = meter(for: kind)
+            if running != kind {
+                running.map { self.meter(for: $0).stop() }
                 do {
-                    try audioTap.start()
-                    audioErrorMessage = nil
+                    try meter.start()
+                    running = kind
                     lastFrame = .now
                 } catch {
-                    audioErrorMessage = error.description
-                    if preferences.mode == .audio { preferences.mode = .off }
+                    if preferences.mode == .meter { preferences.mode = .off }
+                    running = nil
                     continue
                 }
             }
@@ -347,54 +358,23 @@ final class AppModel {
             let elapsed = max((now - lastFrame).blink1Milliseconds, 1)
             lastFrame = now
 
-            let raw = audioTap.currentLevels
-            tuneAudio(with: raw, elapsed: Double(elapsed) / 1000)
-            audioMeter.floorDecibels = Float(audioFloorDecibels)
-            audioMeter.expansion = Float(audioExpansion)
-            let levels = audioMeter.update(with: raw, elapsed: Double(elapsed) / 1000)
-            audioLevels = levels
-
-            let brightness = effectiveBrightness
-            let left = Blink1.Color(audioLevel: levels.left).dimmed(to: brightness)
-            let right = Blink1.Color(audioLevel: levels.right).dimmed(to: brightness)
-            do {
-                try await coordinator.showLevels(left: left, right: right, fade: Self.audioFade)
-            } catch {
-                connection = nil
-                appliedOutput = nil
+            if let levels = meter.levels(elapsed: Double(elapsed) / 1000) {
+                let brightness = effectiveBrightness
+                do {
+                    try await coordinator.showLevels(left: meter.color(for: levels.left).dimmed(to: brightness),
+                                                     right: meter.color(for: levels.right).dimmed(to: brightness),
+                                                     fade: meter.fadeDuration)
+                } catch {
+                    connection = nil
+                    appliedOutput = nil
+                }
             }
 
             // The frame budget has to account for the USB traffic, or the loop drifts.
             let spent = (ContinuousClock.now - now).blink1Milliseconds
-            let budget = Int(1000 / Self.audioFrameRate)
+            let budget = Int(1000 / meter.frameRate)
             try? await Task.sleep(for: .milliseconds(max(budget - spent, 1)))
         }
-    }
-
-    /// Keeps the two audio settings current: straight from the preferences by hand, or ramped
-    /// towards what the tuner read off the material.
-    ///
-    /// Ramped rather than set: a proposal every twenty seconds would otherwise be a visible jolt,
-    /// and the point of adjusting automatically is that nobody notices it happening.
-    private func tuneAudio(with levels: SystemAudioTap.Levels, elapsed: TimeInterval) {
-        guard preferences.audioAutoAdjusts else {
-            audioFloorDecibels = preferences.audioFloorDecibels
-            audioExpansion = preferences.audioExpansion
-            audioTarget = nil
-            return
-        }
-
-        audioTuner.record(left: levels.left, right: levels.right)
-        if let proposal = audioTuner.proposal() {
-            audioTarget = proposal
-        }
-        guard let target = audioTarget else { return }
-
-        // A three second ramp: slow enough to be invisible, quick enough to have arrived before the
-        // next proposal.
-        let step = min(elapsed / 3, 1)
-        audioFloorDecibels += (Double(target.floorDecibels) - audioFloorDecibels) * step
-        audioExpansion += (Double(target.expansion) - audioExpansion) * step
     }
 
     private func blipIfANewHourStarted() async {

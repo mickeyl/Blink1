@@ -28,7 +28,8 @@ extension AppModel {
             case .clock:
                 preferences.mode = .timeOfDay
             case .audio:
-                preferences.mode = .audio
+                preferences.meterKind = .audio
+                preferences.mode = .meter
             case .signal(let name, let seconds, let source):
                 guard let signal = Blink1.Signal(rawValue: name.lowercased()) else {
                     return .failure("unknown signal '\(name)' — try \(Blink1.Signal.allCases.map(\.rawValue).joined(separator: ", "))")
@@ -56,7 +57,7 @@ extension AppModel {
         let shown: (mode: String, what: String) = switch claim.presentation {
             case .signal(let signal): ("signal", signal.rawValue)
             case .color(let color): ("color", claim.label ?? color.hexString)
-            case .audio: ("audio", claim.label ?? "")
+            case .meter(let kind): (kind.rawValue, claim.label ?? "")
             case .off: ("off", claim.label ?? "")
         }
         let detail = shown.what.isEmpty
@@ -81,9 +82,13 @@ extension AppModel {
             case .timeOfDay:
                 mode = "clock"
                 detail = timeOfDayColor.hexString
-            case .audio:
-                mode = "audio"
-                detail = String(format: "L %.0f%% R %.0f%%", audioLevels.left * 100, audioLevels.right * 100)
+            case .meter:
+                let meter = meter(for: preferences.meterKind)
+                let levels = meter.currentLevels
+                mode = preferences.meterKind.rawValue
+                detail = String(format: "%@ %.0f%% %@ %.0f%%",
+                                meter.channelLabels.left, levels.left * 100,
+                                meter.channelLabels.right, levels.right * 100)
         }
         return ControlResponse(ok: true, mode: mode, detail: detail, device: connection?.serialNumber)
     }

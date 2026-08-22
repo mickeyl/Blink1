@@ -8,8 +8,8 @@ enum DeviceOutput: Equatable, Sendable {
     case color(Blink1.Color)
     /// One of the signals stored in the device's bank.
     case signal(Blink1.Signal)
-    /// The LEDs follow the audio levels; the colors are pushed frame by frame, not applied once.
-    case audio
+    /// The LEDs follow a continuous measurement; colors are pushed frame by frame, not set once.
+    case meter(LiveMeterKind)
 
     /// The color to tint the menu bar icon with — an approximation for signals, which move.
     var indicatorColor: Blink1.Color {
@@ -17,7 +17,8 @@ enum DeviceOutput: Equatable, Sendable {
             case .off: .black
             case .color(let color): color
             case .signal(let signal): signal.steps().first(where: { !$0.color.isBlack })?.color ?? .black
-            case .audio: Blink1.Color(audioLevel: 0.6)
+            case .meter(.network): Blink1.Color(flowLevel: 0.6)
+            case .meter: Blink1.Color(meterLevel: 0.6)
         }
     }
 }

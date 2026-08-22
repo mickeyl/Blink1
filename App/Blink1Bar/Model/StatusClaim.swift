@@ -77,14 +77,14 @@ struct StatusClaim: Identifiable, Equatable {
         case color(Blink1.Color)
         case signal(Blink1.Signal)
         /// Colors are pushed frame by frame rather than set once.
-        case audio
+        case meter(LiveMeterKind)
 
         var output: DeviceOutput {
             switch self {
                 case .off: .off
                 case .color(let color): .color(color)
                 case .signal(let signal): .signal(signal)
-                case .audio: .audio
+                case .meter(let kind): .meter(kind)
             }
         }
     }

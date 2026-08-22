@@ -106,15 +106,20 @@ The Makefile wraps all of it: `make bank`, then `make ok`, `make busy`, `make er
   amber towards the evening. Optionally a short blip on every full hour.
 * **Color** — one steady color as decoration, from a picker or a row of presets.
 * **Signal** — plays any signal from the bank by hand.
-* **Audio** — the LEDs become a stereo VU meter: top LED the left channel, bottom the right, running
-  the familiar ramp from dark green through yellow and orange to red.
+* **Meter** — the LEDs become a two-channel instrument, painted frame by frame:
+  * *Audio*: a stereo VU meter, left channel on top, right below, running the familiar ramp from dark
+    green through yellow and orange to red.
+  * *Load*: processor use on top, memory in use below — the machine's own mood, read straight from
+    the kernel.
+  * *Network*: incoming on top, outgoing below, on a logarithmic scale from 10 kB/s to 50 MB/s,
+    in a cool blue-to-white ramp so it is never mistaken for the other two.
 * **Off**.
 
 <p align="center">
   <img src="docs/audio-mode.png" width="300" alt="Audio mode: two channel meters, the VU gradient and a sensitivity slider">
 </p>
 
-Audio mode taps the system output through Core Audio (`AudioHardwareCreateProcessTap`, macOS 14.2 and
+The audio meter taps the system output through Core Audio (`AudioHardwareCreateProcessTap`, macOS 14.2 and
 later) — no virtual audio driver, and playback is not interrupted. macOS asks for the system audio
 recording permission the first time; without it the tap delivers silence rather than an error, which
 is worth knowing when the meters stay at zero. Levels are RMS on a decibel scale with a fast attack

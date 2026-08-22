@@ -12,7 +12,7 @@ struct Preferences: Codable, Equatable, Sendable {
         case color
         case signal
         case timeOfDay
-        case audio
+        case meter
 
         var id: String { rawValue }
     }
@@ -38,6 +38,8 @@ struct Preferences: Codable, Equatable, Sendable {
     var audioExpansion: Double = 2.5
     /// Lets the meter read the material and set the two above itself.
     var audioAutoAdjusts: Bool = true
+    /// Which continuous measurement the LEDs follow while the mode is `.meter`.
+    var meterKind: LiveMeterKind = .audio
     var dimsAtNight: Bool = true
     var nightStartHour: Int = 22
     var nightEndHour: Int = 7
