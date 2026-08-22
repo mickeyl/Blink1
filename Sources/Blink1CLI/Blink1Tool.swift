@@ -26,7 +26,7 @@ struct Blink1Tool: ParsableCommand {
           1  error                 64  usage error
           2  no blink(1) found
         """,
-        version: "1.0.0",
+        version: "1.0.1",
         subcommands: [
             ListCommand.self,
             StatusCommand.self,
