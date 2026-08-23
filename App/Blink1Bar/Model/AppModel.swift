@@ -43,6 +43,7 @@ final class AppModel {
     private var appliedBrightness: Double?
     private var lastBlipHour: Int?
     private var isAsleep = false
+    private var physicalResetAlertedSerialNumber: String?
     private var tasks: [Task<Void, Never>] = []
 
     /// The watchdog has to be re-armed well inside its own timeout, or it fires on a healthy app.
@@ -225,7 +226,15 @@ final class AppModel {
     private func feedTheWatchdog() async {
         while !Task.isCancelled {
             if preferences.armsWatchdog, !isAsleep, connection != nil {
-                try? await coordinator.armWatchdog(timeout: Self.watchdogTimeout)
+                do {
+                    try await coordinator.armWatchdog(timeout: Self.watchdogTimeout)
+                } catch let error as Blink1Error {
+                    await invalidateConnection(error)
+                    await applyCurrentOutput()
+                } catch {
+                    await invalidateConnection(error.localizedDescription)
+                    await applyCurrentOutput()
+                }
             }
             try? await Task.sleep(for: Self.watchdogHeartbeat)
         }
@@ -273,6 +282,9 @@ final class AppModel {
     private func watchForDevices() async {
         while !Task.isCancelled {
             attachedDevices = await coordinator.attachedDevices()
+            if attachedDevices.isEmpty {
+                physicalResetAlertedSerialNumber = nil
+            }
             if connection == nil, !attachedDevices.isEmpty {
                 await connectIfNeeded()
                 await applyCurrentOutput()
@@ -301,11 +313,28 @@ final class AppModel {
 
     /// Something else may have written to the device; if so, take it back.
     private func resyncIfTheDeviceDrifted() async {
-        // A meter changes colour every frame; there is no steady state to compare against.
-        if case .meter = currentOutput { return }
         guard !isAsleep, connection != nil, appliedOutput != nil else { return }
-        guard await coordinator.needsResync(for: currentOutput, brightness: effectiveBrightness) else { return }
+        do {
+            guard try await coordinator.needsResync(for: currentOutput,
+                                                    brightness: effectiveBrightness) else { return }
+            appliedOutput = nil
+        } catch let error as Blink1Error {
+            await invalidateConnection(error)
+        } catch {
+            await invalidateConnection(error.localizedDescription)
+        }
+    }
+
+    /// A failed read is a failed connection check, not evidence that the cached output is correct.
+    private func invalidateConnection(_ error: Blink1Error) async {
+        await invalidateConnection(error.description)
+    }
+
+    private func invalidateConnection(_ message: String) async {
+        await coordinator.disconnect()
+        connection = nil
         appliedOutput = nil
+        lastErrorMessage = message
     }
 
     /// Hands the LED back when a claim lapses.
@@ -393,7 +422,14 @@ final class AppModel {
         do {
             connection = try await coordinator.connect(serialNumber: preferences.preferredSerialNumber,
                                                        brightness: effectiveBrightness)
+            physicalResetAlertedSerialNumber = nil
             lastErrorMessage = nil
+        } catch let error as Blink1Coordinator.PhysicalResetRequired {
+            connection = nil
+            lastErrorMessage = R.L.Device_RESET_STATUS
+            guard physicalResetAlertedSerialNumber != error.serialNumber else { return }
+            physicalResetAlertedSerialNumber = error.serialNumber
+            PhysicalResetAlert.present(serialNumber: error.serialNumber)
         } catch let error as Blink1Error {
             connection = nil
             lastErrorMessage = error.description

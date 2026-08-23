@@ -8,3 +8,4 @@ App/Blink1Bar/Resources/Shark.swift
 App/Blink1Bar/Resources/Info.plist
 DerivedData/
 App/Config/Local.xcconfig
+App/Dist/

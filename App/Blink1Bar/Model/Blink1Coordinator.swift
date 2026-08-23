@@ -7,6 +7,10 @@ import Foundation
 /// one place may talk to it. Everything device-facing goes through this actor.
 actor Blink1Coordinator {
 
+    struct PhysicalResetRequired: Error, Sendable {
+        let serialNumber: String
+    }
+
     struct Connection: Equatable, Sendable {
         let serialNumber: String
         let productName: String
@@ -33,9 +37,18 @@ actor Blink1Coordinator {
         disconnect()
         let device = try serialNumber.map { try Blink1.open(serialNumber: $0) } ?? Blink1.open()
         self.device = device
-        try device.installSignals(brightness: brightness)
-        installedBrightness = brightness
-        return try describe(device)
+        do {
+            // A previous process may have died with the watchdog armed. Start the new ownership
+            // period from a quiet, deterministic state before probing the lighting engine.
+            try device.disarmWatchdog()
+            try device.installSignals(brightness: brightness)
+            try verifyLightingEngine(on: device)
+            installedBrightness = brightness
+            return try describe(device)
+        } catch {
+            disconnect()
+            throw error
+        }
     }
 
     func disconnect() {
@@ -80,27 +93,59 @@ actor Blink1Coordinator {
     /// The app is not the only thing that can reach the blink(1) — a CLI run with `--direct`, a test,
     /// or a glitch on the bus all leave the LED saying something the app never sent. Without this,
     /// the cached "already applied" state would keep it that way forever.
-    func needsResync(for output: DeviceOutput, brightness: Double) -> Bool {
-        guard let device else { return false }
-        do {
-            switch output {
-                case .off:
-                    return try !device.readColor().color.isBlack
-                case .color(let color):
-                    let expected = color.dimmed(to: brightness)
-                    let actual = try device.readColor().color
-                    return !Self.isClose(actual, expected)
-                case .meter:
-                    return false
-                case .signal(let signal):
-                    // A signal is a running pattern: the range it plays is the thing to compare.
-                    let state = try device.readPlayState()
-                    return !state.isPlaying
-                        || state.startPosition != signal.slots.lowerBound
-                        || state.endPosition != signal.slots.upperBound
-            }
-        } catch {
-            return false
+    func needsResync(for output: DeviceOutput, brightness: Double) throws(Blink1Error) -> Bool {
+        guard let device else { throw .noDeviceFound }
+        switch output {
+            case .off:
+                if try isPatternPlaying(on: device) { return true }
+                return try !device.readColor().color.isBlack
+            case .color(let color):
+                if try isPatternPlaying(on: device) { return true }
+                let expected = color.dimmed(to: brightness)
+                let actual = try device.readColor().color
+                return !Self.isClose(actual, expected)
+            case .meter:
+                // A meter has no stable frame to compare, but it still needs a real round-trip so a
+                // stale IOKit handle cannot keep the UI looking connected indefinitely.
+                try device.selfTest()
+                return false
+            case .signal(let signal):
+                // A signal is a running pattern: the range it plays is the thing to compare.
+                let state = try device.readPlayState()
+                return !state.isPlaying
+                    || state.startPosition != signal.slots.lowerBound
+                    || state.endPosition != signal.slots.upperBound
+        }
+    }
+
+    private func isPatternPlaying(on device: Blink1) throws(Blink1Error) -> Bool {
+        guard device.model.supportsPatternLoop else { return false }
+        return try device.readPlayState().isPlaying
+    }
+
+    /// Verifies more than USB reachability: the firmware must actually execute a fade and report
+    /// its result. A wedged lighting engine can still answer identity and self-test reports.
+    private func verifyLightingEngine(on device: Blink1) throws {
+        guard device.model != .mk1 else { return }
+
+        defer {
+            try? device.stop()
+            try? device.turnOff()
+        }
+
+        try device.stop()
+        try device.turnOff()
+        Thread.sleep(forTimeInterval: 0.03)
+        guard try device.readColor().color.isBlack else {
+            throw PhysicalResetRequired(serialNumber: device.serialNumber)
+        }
+
+        let probe = Blink1.Color(red: 0, green: 0, blue: 32)
+        try device.fade(to: probe, over: .milliseconds(50))
+        Thread.sleep(forTimeInterval: 0.12)
+        let actual = try device.readColor().color
+        guard Self.isClose(actual, probe) else {
+            throw PhysicalResetRequired(serialNumber: device.serialNumber)
         }
     }
 

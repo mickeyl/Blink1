@@ -9,6 +9,10 @@
 "Device_DETAILS" = "%@ · firmware %@";
 "Device_PICKER" = "Device";
 "Device_AUTOMATIC" = "First one found";
+"Device_RESET_TITLE" = "Reconnect blink(1)";
+"Device_RESET_MESSAGE" = "The device %@ responds over USB, but its LEDs are not applying color commands. Unplug the blink(1), then plug it back in. Blink1Bar will reconnect automatically.";
+"Device_RESET_BUTTON" = "OK";
+"Device_RESET_STATUS" = "The blink(1) needs to be unplugged and reconnected";
 
 /* Menu */
 "MenuContent_MODE_OFF" = "Off";

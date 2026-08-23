@@ -10,6 +10,15 @@ CONFIG ?= release
 PREFIX ?= /usr/local
 BUILD_DIR := .build/$(CONFIG)
 BIN := $(BUILD_DIR)/blink1
+APP_PROJECT := App/Blink1Bar.xcodeproj
+APP_SCHEME := Blink1Bar
+APP_VERSION := $(shell awk -F ' = ' '/^MARKETING_VERSION/ { print $$2; exit }' App/Config/Base.xcconfig)
+APP_RELEASE_DERIVED_DATA ?= App/.build/ReleaseDerivedData
+APP_RELEASE_APP := $(APP_RELEASE_DERIVED_DATA)/Build/Products/Release/Blink1Bar.app
+APP_DIST_DIR := App/Dist
+APP_DIST_ARCHIVE := $(APP_DIST_DIR)/Blink1Bar-$(APP_VERSION)-macOS.zip
+APP_SIGN_IDENTITY ?= Developer ID Application: Michael Lauer (NANNL9SK66)
+NOTARY_PROFILE ?=
 
 # make DEVICE=36cf12c4 error   — pick one of several attached blink(1)s
 DEVICE ?=
@@ -20,7 +29,7 @@ BRIGHTNESS ?= 1.0
 Q := --quiet
 
 .PHONY: help build debug test install uninstall clean list info read map bank bank-save \
-        app app-project app-run mac-run off ok idle busy info-signal warn error critical success failure \
+        app app-project app-run mac-run app-package app-release off ok idle busy info-signal warn error critical success failure \
         host-gone demo
 
 help: ## Show this help
@@ -63,6 +72,35 @@ mac-run: app ## Build, stop running instances and launch the menu bar app
 	@open App/.build/DerivedData/Build/Products/Release/Blink1Bar.app
 
 app-run: mac-run ## Alias for mac-run
+
+app-package: app-project ## Build and package the Developer ID release app
+	@xcodebuild -project $(APP_PROJECT) -scheme $(APP_SCHEME) -configuration Release \
+		-destination 'generic/platform=macOS' -derivedDataPath $(APP_RELEASE_DERIVED_DATA) \
+		CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$(APP_SIGN_IDENTITY)" DEVELOPMENT_TEAM=NANNL9SK66 \
+		ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+		OTHER_CODE_SIGN_FLAGS="--timestamp" build | xcbeautify -qq
+	@codesign --verify --deep --strict --verbose=2 "$(APP_RELEASE_APP)"
+	@if codesign -d --entitlements :- "$(APP_RELEASE_APP)" 2>/dev/null | grep -q com.apple.security.get-task-allow; then \
+		echo "ERROR: Release app contains com.apple.security.get-task-allow."; \
+		exit 1; \
+	fi
+	@mkdir -p "$(APP_DIST_DIR)"
+	@rm -f "$(APP_DIST_ARCHIVE)"
+	@ditto -c -k --keepParent --sequesterRsrc --zlibCompressionLevel 9 "$(APP_RELEASE_APP)" "$(APP_DIST_ARCHIVE)"
+	@shasum -a 256 "$(APP_DIST_ARCHIVE)"
+
+app-release: ## Notarize and staple the Homebrew release archive
+	@if [ -z "$(NOTARY_PROFILE)" ]; then \
+		echo "ERROR: Set NOTARY_PROFILE to a notarytool keychain profile."; \
+		exit 1; \
+	fi
+	@$(MAKE) app-package
+	@xcrun notarytool submit "$(APP_DIST_ARCHIVE)" --keychain-profile "$(NOTARY_PROFILE)" --wait
+	@xcrun stapler staple "$(APP_RELEASE_APP)"
+	@spctl -a -vvv -t exec "$(APP_RELEASE_APP)"
+	@rm -f "$(APP_DIST_ARCHIVE)"
+	@ditto -c -k --keepParent --sequesterRsrc --zlibCompressionLevel 9 "$(APP_RELEASE_APP)" "$(APP_DIST_ARCHIVE)"
+	@shasum -a 256 "$(APP_DIST_ARCHIVE)"
 
 $(BIN):
 	$(SWIFT) build -c $(CONFIG)

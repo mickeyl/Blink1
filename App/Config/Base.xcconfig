@@ -14,7 +14,7 @@ CODE_SIGN_STYLE = Automatic
 // Config/Local.xcconfig (git-ignored), or select a team in Xcode once.
 #include? "Local.xcconfig"
 
-MARKETING_VERSION = 1.1.0
+MARKETING_VERSION = 1.1.1
 CURRENT_PROJECT_VERSION = 3
 
 // UI code is MainActor-isolated by default; the device I/O lives in an actor.

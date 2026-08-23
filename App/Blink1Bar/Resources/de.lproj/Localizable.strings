@@ -7,6 +7,10 @@
 "Device_DETAILS" = "%@ · Firmware %@";
 "Device_PICKER" = "Gerät";
 "Device_AUTOMATIC" = "Erstes gefundenes";
+"Device_RESET_TITLE" = "blink(1) neu verbinden";
+"Device_RESET_MESSAGE" = "Das Gerät %@ antwortet über USB, setzt Farbbefehle aber nicht um. Ziehe den blink(1) ab und schließe ihn anschließend wieder an. Blink1Bar verbindet sich automatisch neu.";
+"Device_RESET_BUTTON" = "OK";
+"Device_RESET_STATUS" = "Der blink(1) muss abgezogen und neu verbunden werden";
 
 /* Menü */
 "MenuContent_MODE_OFF" = "Aus";

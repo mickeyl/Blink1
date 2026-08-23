@@ -57,6 +57,36 @@ struct ProtocolTests {
         #expect(Blink1.Model.mk3.supportsNotes)
     }
 
+    @Test("decodes a valid pattern-player response")
+    func decodesPlayState() throws {
+        let response: [UInt8] = [1, UInt8(ascii: "S"), 1, 2, 7, 0, 4, 0]
+        let state = try Blink1.decodePlayState(response, patternSlots: 32)
+
+        #expect(state.isPlaying)
+        #expect(state.startPosition == 2)
+        #expect(state.endPosition == 7)
+        #expect(state.currentPosition == 4)
+    }
+
+    @Test("allows the firmware's stale position after playback stops")
+    func decodesStoppedPlayState() throws {
+        let response: [UInt8] = [1, UInt8(ascii: "S"), 0, 0, 31, 0, 213, 0]
+        let state = try Blink1.decodePlayState(response, patternSlots: 32)
+
+        #expect(state.isPlaying == false)
+    }
+
+    @Test("rejects scrambled pattern-player responses", arguments: [
+        [UInt8](arrayLiteral: 1, UInt8(ascii: "S"), 217, 0, 31, 0, 4, 0),
+        [UInt8](arrayLiteral: 1, UInt8(ascii: "S"), 1, 0, 31, 0, 213, 0),
+        [UInt8](arrayLiteral: 1, UInt8(ascii: "S"), 1, 0, 32, 0, 4, 0),
+    ])
+    func rejectsMalformedPlayState(response: [UInt8]) {
+        #expect(throws: Blink1Error.self) {
+            try Blink1.decodePlayState(response, patternSlots: 32)
+        }
+    }
+
     @Test("keeps the gamma curve monotonic between the expected endpoints")
     func gammaCurve() {
         #expect(Gamma.corrected(0) == 0)

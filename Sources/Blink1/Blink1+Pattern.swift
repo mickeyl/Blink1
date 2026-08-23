@@ -95,7 +95,19 @@ extension Blink1 {
     public func readPlayState() throws(Blink1Error) -> PlayState {
         try require(model.supportsPatternLoop, feature: "reading the play state")
         let response = try request(.readPlayState)
-        return PlayState(isPlaying: response[2] != 0,
+        return try Self.decodePlayState(response, patternSlots: patternSlots)
+    }
+
+    /// Rejects a scrambled response instead of turning arbitrary bytes into a plausible player state.
+    static func decodePlayState(_ response: [UInt8], patternSlots: Int) throws(Blink1Error) -> PlayState {
+        guard response.count > 6,
+              response[2] <= 1,
+              Int(response[3]) < patternSlots,
+              Int(response[4]) < patternSlots,
+              response[2] == 0 || Int(response[6]) < patternSlots else {
+            throw .malformedResponse
+        }
+        return PlayState(isPlaying: response[2] == 1,
                          startPosition: response[3],
                          endPosition: response[4],
                          remainingRepeats: response[5],

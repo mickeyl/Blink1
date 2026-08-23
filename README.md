@@ -29,6 +29,16 @@ macOS 13 or later for the library and the tool, macOS 26 for the menu bar app. S
 Building the app additionally needs [XcodeGen](https://github.com/yonaskolb/XcodeGen) and
 [Shark](https://github.com/kaandedeoglu/Shark) 2.2.0 or later; `make app` runs both.
 
+## Homebrew
+
+```sh
+brew tap mickeyl/formulae
+brew install blink1
+brew install --cask blink1bar
+```
+
+The formula installs the command line tool; the cask installs Blink1Bar.
+
 ## The tool
 
 ```sh
