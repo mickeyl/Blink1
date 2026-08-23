@@ -30,9 +30,12 @@ struct MeterSectionView: View {
             }
 
             let meter = model.meter(for: model.preferences.meterKind)
-            channel(label: meter.channelLabels.left, level: meter.currentLevels.left, meter: meter)
-            channel(label: meter.channelLabels.right, level: meter.currentLevels.right, meter: meter)
-            scale(for: meter)
+            SegmentedMeterChannel(label: meter.channelLabels.left,
+                                  level: meter.currentLevels.left,
+                                  meter: meter)
+            SegmentedMeterChannel(label: meter.channelLabels.right,
+                                  level: meter.currentLevels.right,
+                                  meter: meter)
 
             Text(explanation)
                 .font(.caption)
@@ -58,35 +61,44 @@ struct MeterSectionView: View {
         ByteCountFormatStyle(style: .memory, allowedUnits: [.kb, .mb, .gb], spellsOutZero: false)
             .format(Int64(max(bytesPerSecond, 0))) + "/s"
     }
+}
 
-    /// The bar carries the same colour the LED shows, so the menu reads like the device.
-    private func channel(label: String, level: Float, meter: any LiveMeter) -> some View {
+/// A fixed-colour meter: its ramp stays put while the level only switches segments on and off.
+private struct SegmentedMeterChannel: View {
+
+    private static let segmentCount = 24
+
+    let label: String
+    let level: Float
+    let meter: any LiveMeter
+
+    private var clampedLevel: Float {
+        min(max(level, 0), 1)
+    }
+
+    private var activeSegmentCount: Int {
+        Int((clampedLevel * Float(Self.segmentCount)).rounded(.up))
+    }
+
+    var body: some View {
         HStack(spacing: 6) {
             Text(label)
                 .font(.caption.monospaced())
                 .foregroundStyle(.secondary)
                 .frame(width: 28, alignment: .leading)
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.quaternary)
-                    Capsule()
-                        .fill(meter.color(for: level).swiftUI)
-                        .frame(width: max(geometry.size.width * Double(level), 2))
+
+            HStack(spacing: 2) {
+                ForEach(0..<Self.segmentCount, id: \.self) { segment in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(meter.color(for: Float(segment + 1) / Float(Self.segmentCount)).swiftUI)
+                        .opacity(segment < activeSegmentCount ? 1 : 0.12)
+                        .frame(maxWidth: .infinity)
                 }
             }
             .frame(height: 8)
         }
-    }
-
-    /// The ramp the LEDs run through, drawn from the very function that feeds them.
-    private func scale(for meter: any LiveMeter) -> some View {
-        HStack(spacing: 0) {
-            ForEach(0..<60, id: \.self) { step in
-                Rectangle().fill(meter.color(for: Float(step) / 59).swiftUI)
-            }
-        }
-        .frame(height: 5)
-        .clipShape(RoundedRectangle(cornerRadius: 2.5))
-        .padding(.leading, 34)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: label))
+        .accessibilityValue(Text(Double(clampedLevel), format: .percent.precision(.fractionLength(0))))
     }
 }
