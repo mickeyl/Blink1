@@ -33,7 +33,7 @@ Building the app additionally needs [XcodeGen](https://github.com/yonaskolb/Xcod
 
 ```sh
 brew tap mickeyl/formulae
-brew install blink1
+brew install blink1-swift
 brew install --cask blink1bar
 ```
 
