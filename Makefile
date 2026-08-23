@@ -20,7 +20,7 @@ BRIGHTNESS ?= 1.0
 Q := --quiet
 
 .PHONY: help build debug test install uninstall clean list info read map bank bank-save \
-        app app-project app-run off ok idle busy info-signal warn error critical success failure \
+        app app-project app-run mac-run off ok idle busy info-signal warn error critical success failure \
         host-gone demo
 
 help: ## Show this help
@@ -58,9 +58,11 @@ app: app-project ## Build the menu bar app
 	@xcodebuild -project App/Blink1Bar.xcodeproj -scheme Blink1Bar -configuration Release \
 		-destination 'platform=macOS' -derivedDataPath App/.build/DerivedData build | xcbeautify -qq
 
-app-run: app ## Build and launch the menu bar app
-	@pkill -f Blink1Bar.app 2>/dev/null || true
+mac-run: app ## Build, stop running instances and launch the menu bar app
+	@pkill -x Blink1Bar 2>/dev/null || true
 	@open App/.build/DerivedData/Build/Products/Release/Blink1Bar.app
+
+app-run: mac-run ## Alias for mac-run
 
 $(BIN):
 	$(SWIFT) build -c $(CONFIG)
